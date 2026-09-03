@@ -1,4 +1,20 @@
-const params = new URLSearchParams(window.location.search);
+// Active le plein écran au premier clic sur la page, sans déclencher de navigation
+let fullscreenActivated = false;
+
+function enterFullscreenOnce(e) {
+  if (!fullscreenActivated) {
+    fullscreenActivated = true;
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { // Safari
+      elem.webkitRequestFullscreen();
+    }
+    document.removeEventListener('click', enterFullscreenOnce);
+  }
+}
+
+document.addEventListener('click', enterFullscreenOnce);const params = new URLSearchParams(window.location.search);
 const serieName = params.get('s');
 
 const mainImage = document.getElementById('mainImage');
