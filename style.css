@@ -131,3 +131,20 @@ body::before {
   opacity: 0;
   pointer-events: none;
 }
+.fullscreen-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 32px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #1a1a1a;
+  cursor: pointer;
+  z-index: 10;
+  transition: opacity 0.3s ease;
+}
+
+.controls-hidden .fullscreen-btn {
+  opacity: 0;
+  pointer-events: none;
+}
