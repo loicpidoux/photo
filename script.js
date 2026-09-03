@@ -5,6 +5,8 @@ const mainImage = document.getElementById('mainImage');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const viewer = document.getElementById('viewer');
+const closeBtn = document.getElementById('closeBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
 
 let images = [];
 let currentIndex = 0;
@@ -28,19 +30,22 @@ function showImage(index) {
 }
 
 function updateArrows() {
+  // La flèche gauche reste cachée sur la première image
   prevBtn.style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
-  nextBtn.style.visibility = currentIndex === images.length - 1 ? 'hidden' : 'visible';
+  // La flèche droite reste toujours visible puisqu'elle boucle
+  nextBtn.style.visibility = 'visible';
 }
 
 function preloadNext() {
-  if (currentIndex + 1 < images.length) {
-    const nextImg = new Image();
-    nextImg.src = images[currentIndex + 1];
-  }
+  const nextIndex = (currentIndex + 1) % images.length;
+  const nextImg = new Image();
+  nextImg.src = images[nextIndex];
 }
 
 function goNext() {
-  if (currentIndex < images.length - 1) showImage(currentIndex + 1);
+  // Boucle : après la dernière image, on revient à la première
+  currentIndex = (currentIndex + 1) % images.length;
+  showImage(currentIndex);
 }
 
 function goPrev() {
@@ -67,27 +72,38 @@ function resetInactivityTimer() {
 document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
 
-// --- Ajout : plein écran au premier clic ---
-let fullscreenActivated = false;
-
-function enterFullscreenOnce(e) {
-  if (!fullscreenActivated) {
-    fullscreenActivated = true;
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
-    }
-    document.removeEventListener('click', enterFullscreenOnce);
+// --- Plein écran ---
+function enterFullscreen() {
+  const elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
   }
 }
 
+// Premier clic n'importe où sur la page = entrée en plein écran (une seule fois)
+let fullscreenAutoActivated = false;
+function enterFullscreenOnce(e) {
+  if (!fullscreenAutoActivated) {
+    fullscreenAutoActivated = true;
+    enterFullscreen();
+    document.removeEventListener('click', enterFullscreenOnce);
+  }
+}
 document.addEventListener('click', enterFullscreenOnce);
 
-// --- Ajout : la croix sort du plein écran avant de rediriger ---
-document.getElementById('closeBtn').addEventListener('click', (e) => {
+// Bouton plein écran explicite (utile après un Echap)
+fullscreenBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  enterFullscreen();
+});
+
+// Croix : sort du plein écran si actif, sinon retourne à l'accueil
+closeBtn.addEventListener('click', (e) => {
   if (document.fullscreenElement) {
+    e.preventDefault();
     document.exitFullscreen();
   }
+  // sinon, le comportement par défaut du lien (retour à index.html) s'applique
 });
