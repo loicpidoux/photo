@@ -1,26 +1,49 @@
-const params = new URLSearchParams(window.location.search);
-const serieName = params.get('s');
-
+const home = document.getElementById('home');
+const viewer = document.getElementById('viewer');
 const mainImage = document.getElementById('mainImage');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
-const viewer = document.getElementById('viewer');
 const closeBtn = document.getElementById('closeBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 
 let images = [];
 let currentIndex = 0;
 
-fetch(`photos/${serieName}/liste.json`)
-  .then(res => res.json())
-  .then(list => {
-    images = list.map(name => `photos/${serieName}/${name}`);
-    showImage(0);
-    preloadNext();
-  })
-  .catch(err => {
-    console.error("Impossible de charger la série :", err);
+// --- Ouverture d'une série : tout se passe dans le même clic ---
+document.querySelectorAll('.serie-link').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const serieName = link.dataset.serie;
+
+    // Demande le plein écran DANS le même geste utilisateur
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    openSerie(serieName);
   });
+});
+
+function openSerie(serieName) {
+  fetch(`photos/${serieName}/liste.json`)
+    .then(res => res.json())
+    .then(list => {
+      images = list.map(name => `photos/${serieName}/${name}`);
+      currentIndex = 0;
+      home.style.display = 'none';
+      viewer.style.display = 'flex';
+      showImage(0);
+    })
+    .catch(err => console.error("Impossible de charger la série :", err));
+}
+
+function closeSerie() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+  viewer.style.display = 'none';
+  home.style.display = 'flex';
+}
 
 function showImage(index) {
   currentIndex = index;
@@ -30,9 +53,7 @@ function showImage(index) {
 }
 
 function updateArrows() {
-  // La flèche gauche reste cachée sur la première image
   prevBtn.style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
-  // La flèche droite reste toujours visible puisqu'elle boucle
   nextBtn.style.visibility = 'visible';
 }
 
@@ -43,7 +64,6 @@ function preloadNext() {
 }
 
 function goNext() {
-  // Boucle : après la dernière image, on revient à la première
   currentIndex = (currentIndex + 1) % images.length;
   showImage(currentIndex);
 }
@@ -55,11 +75,27 @@ function goPrev() {
 nextBtn.addEventListener('click', goNext);
 prevBtn.addEventListener('click', goPrev);
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') goNext();
-  if (e.key === 'ArrowLeft') goPrev();
+closeBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  closeSerie();
 });
 
+document.addEventListener('keydown', (e) => {
+  if (viewer.style.display === 'none') return;
+  if (e.key === 'ArrowRight') goNext();
+  if (e.key === 'ArrowLeft') goPrev();
+  if (e.key === 'Escape') closeSerie();
+});
+
+// --- Bouton plein écran manuel (utile après un Echap) ---
+fullscreenBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+});
+
+// --- Masquage des contrôles après inactivité ---
 let inactivityTimer;
 function resetInactivityTimer() {
   viewer.classList.remove('controls-hidden');
@@ -68,42 +104,5 @@ function resetInactivityTimer() {
     viewer.classList.add('controls-hidden');
   }, 2000);
 }
-
 document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
-
-// --- Plein écran ---
-function enterFullscreen() {
-  const elem = document.documentElement;
-  if (elem.requestFullscreen) {
-    elem.requestFullscreen();
-  } else if (elem.webkitRequestFullscreen) {
-    elem.webkitRequestFullscreen();
-  }
-}
-
-// Premier clic n'importe où sur la page = entrée en plein écran (une seule fois)
-let fullscreenAutoActivated = false;
-function enterFullscreenOnce(e) {
-  if (!fullscreenAutoActivated) {
-    fullscreenAutoActivated = true;
-    enterFullscreen();
-    document.removeEventListener('click', enterFullscreenOnce);
-  }
-}
-document.addEventListener('click', enterFullscreenOnce);
-
-// Bouton plein écran explicite (utile après un Echap)
-fullscreenBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  enterFullscreen();
-});
-
-// Croix : sort du plein écran si actif, sinon retourne à l'accueil
-closeBtn.addEventListener('click', (e) => {
-  if (document.fullscreenElement) {
-    e.preventDefault();
-    document.exitFullscreen();
-  }
-  // sinon, le comportement par défaut du lien (retour à index.html) s'applique
-});
