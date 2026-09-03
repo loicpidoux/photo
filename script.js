@@ -47,7 +47,9 @@ function showImage(index) {
   currentIndex = index;
   mainImage.src = images[index];
   updateArrows();
-  preloadNext();
+  if (index === 0) {
+    preloadRemaining(0);
+  }
 }
 
 function updateArrows() {
