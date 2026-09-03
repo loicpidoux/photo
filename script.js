@@ -1,20 +1,4 @@
-// Active le plein écran au premier clic sur la page, sans déclencher de navigation
-let fullscreenActivated = false;
-
-function enterFullscreenOnce(e) {
-  if (!fullscreenActivated) {
-    fullscreenActivated = true;
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) { // Safari
-      elem.webkitRequestFullscreen();
-    }
-    document.removeEventListener('click', enterFullscreenOnce);
-  }
-}
-
-document.addEventListener('click', enterFullscreenOnce);const params = new URLSearchParams(window.location.search);
+const params = new URLSearchParams(window.location.search);
 const serieName = params.get('s');
 
 const mainImage = document.getElementById('mainImage');
@@ -25,7 +9,6 @@ const viewer = document.getElementById('viewer');
 let images = [];
 let currentIndex = 0;
 
-// Charge la liste des images de la série
 fetch(`photos/${serieName}/liste.json`)
   .then(res => res.json())
   .then(list => {
@@ -50,7 +33,6 @@ function updateArrows() {
 }
 
 function preloadNext() {
-  // précharge discrètement l'image suivante pour une navigation fluide
   if (currentIndex + 1 < images.length) {
     const nextImg = new Image();
     nextImg.src = images[currentIndex + 1];
@@ -73,7 +55,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') goPrev();
 });
 
-// Masquage des contrôles après inactivité de la souris
 let inactivityTimer;
 function resetInactivityTimer() {
   viewer.classList.remove('controls-hidden');
@@ -85,3 +66,28 @@ function resetInactivityTimer() {
 
 document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
+
+// --- Ajout : plein écran au premier clic ---
+let fullscreenActivated = false;
+
+function enterFullscreenOnce(e) {
+  if (!fullscreenActivated) {
+    fullscreenActivated = true;
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    }
+    document.removeEventListener('click', enterFullscreenOnce);
+  }
+}
+
+document.addEventListener('click', enterFullscreenOnce);
+
+// --- Ajout : la croix sort du plein écran avant de rediriger ---
+document.getElementById('closeBtn').addEventListener('click', (e) => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+});
