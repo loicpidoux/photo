@@ -55,10 +55,13 @@ function updateArrows() {
   nextBtn.style.visibility = 'visible';
 }
 
-function preloadNext() {
-  const nextIndex = (currentIndex + 1) % images.length;
-  const nextImg = new Image();
-  nextImg.src = images[nextIndex];
+function preloadRemaining(fromIndex) {
+  // Précharge toutes les images restantes de la série, dans l'ordre,
+  // en tâche de fond, sans bloquer l'affichage de l'image actuelle.
+  for (let i = fromIndex + 1; i < images.length; i++) {
+    const img = new Image();
+    img.src = images[i];
+  }
 }
 
 function goNext() {
