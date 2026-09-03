@@ -4,8 +4,6 @@ const mainImage = document.getElementById('mainImage');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const closeBtn = document.getElementById('closeBtn');
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-
 let images = [];
 let currentIndex = 0;
 
