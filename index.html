@@ -7,15 +7,28 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="home">
+
+  <main class="home" id="home">
     <nav class="series-list">
-      <a href="serie.html?s=chomage" class="serie-link">Chômage</a>
-      <a href="serie.html?s=gastronmaniac-sa" class="serie-link">Gastronmaniac SA</a>
-      <a href="serie.html?s=av-de-cour-42" class="serie-link">Av. de Cour 42</a>
-      <a href="serie.html?s=2020" class="serie-link">2020</a>
-      <a href="serie.html?s=colonnes" class="serie-link">Colonnes</a>
+      <a href="#" class="serie-link" data-serie="chomage">Chômage</a>
+      <a href="#" class="serie-link" data-serie="gastronmaniac-sa">Gastronmaniac SA</a>
+      <a href="#" class="serie-link" data-serie="av-de-cour-42">Av. de Cour 42</a>
+      <a href="#" class="serie-link" data-serie="2020">2020</a>
+      <a href="#" class="serie-link" data-serie="colonnes">Colonnes</a>
     </nav>
     <a href="contact.html" class="contact-link">Contact</a>
   </main>
+
+  <main class="viewer" id="viewer" style="display:none;">
+    <a href="#" class="close-btn" id="closeBtn">✕</a>
+    <button class="nav-arrow nav-prev" id="prevBtn" aria-label="Image précédente">‹</button>
+    <div class="image-container">
+      <img id="mainImage" src="" alt="">
+    </div>
+    <button class="nav-arrow nav-next" id="nextBtn" aria-label="Image suivante">›</button>
+    <button class="fullscreen-btn" id="fullscreenBtn" aria-label="Plein écran">⛶</button>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>
