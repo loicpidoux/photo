@@ -85,14 +85,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSerie();
 });
 
-// --- Bouton plein écran manuel (utile après un Echap) ---
-fullscreenBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
-  }
-});
-
 // --- Masquage des contrôles après inactivité ---
 let inactivityTimer;
 function resetInactivityTimer() {
