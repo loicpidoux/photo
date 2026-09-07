@@ -13,7 +13,7 @@ html, body {
 }
 
 body {
-  font-family: 'Courier Prime', monospace;
+  font-family: 'Courier New', monospace;
   color: #1a1a1a;
   position: relative;
 }
@@ -34,7 +34,7 @@ body::before {
 
 /* --- Page d'accueil --- */
 .home {
-  min-height: 100vh;
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
   align-items: center;
