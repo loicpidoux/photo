@@ -49,9 +49,6 @@ body::before {
 }
 
 .serie-link {
-  color: #1a1a1a;
-  text-decoration: underline;
-  text-underline-offset: 4px;
   transition: opacity 0.2s ease;
 }
 
