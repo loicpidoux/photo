@@ -13,7 +13,7 @@ html, body {
 }
 
 body {
-  font-family: 'Courier New', monospace;
+  font-family: 'Consolas', monospace;
   color: #1a1a1a;
   position: relative;
 }
