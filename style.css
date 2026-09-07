@@ -51,7 +51,7 @@ body::before {
 .serie-link {
   color: #1a1a1a;
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: 2px;
   transition: opacity 0.2s ease;
 }
 
@@ -64,7 +64,7 @@ body::before {
   bottom: 40px;
   color: #1a1a1a;
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: 3px;
   font-size: 16px;
 }
 
