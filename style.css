@@ -11,7 +11,7 @@ html, body {
   overflow: hidden;
 }
 body {
-  font-family: 'Cascadia Code', monospace;
+  font-family: 'Inconsolata', monospace;
   color: #1a1a1a;
   position: relative;
 }
