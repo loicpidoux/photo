@@ -169,3 +169,47 @@ body::before {
 .grid-cell:hover img {
   opacity: 0.7;
 }
+.contact-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+  padding: 0 24px;
+}
+
+.contact-form label {
+  font-size: 14px;
+}
+
+.contact-form input,
+.contact-form textarea {
+  font-family: 'Consolas', monospace;
+  font-size: 16px;
+  padding: 8px;
+  border: 1px solid #1a1a1a;
+  background: none;
+  color: #1a1a1a;
+}
+
+.contact-form button {
+  font-family: 'Consolas', monospace;
+  font-size: 16px;
+  padding: 10px;
+  background: none;
+  border: 1px solid #1a1a1a;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.contact-form button:hover {
+  opacity: 0.6;
+}
