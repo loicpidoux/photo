@@ -55,8 +55,8 @@ function showImage(index) {
   if (index === 0) {
     preloadRemaining(0);
   }
-  
 }
+
 function showGrid() {
   inGridView = true;
   viewer.style.display = 'none';
@@ -109,6 +109,10 @@ closeBtn.addEventListener('click', (e) => {
   e.preventDefault();
   closeEverything();
 });
+
+document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
+  e.preventDefault();
+  closeEverything();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -121,7 +125,7 @@ document.addEventListener('keydown', (e) => {
 
 let inactivityTimer;
 function resetInactivityTimer() {
-  if (inGridView) return; // pas de masquage des contrôles en mode grille, il n'y en a pas
+  if (inGridView) return;
   viewer.classList.remove('controls-hidden');
   clearTimeout(inactivityTimer);
   inactivityTimer = setTimeout(() => {
