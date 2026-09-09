@@ -116,8 +116,8 @@ body::before {
 }
 .gallery-btn {
   position: fixed;
-  bottom: 32px;
-  right: 48px;
+  bottom: 40px;
+  right: 54px;
   background: none;
   border: none;
   color: #1a1a1a;
