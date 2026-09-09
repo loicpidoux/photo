@@ -10,9 +10,9 @@
   <main class="contact-page">
     <a href="index.html" class="close-btn">✕</a>
 
-    <form action="https://api.staticforms.dev/submit" method="POST" class="contact-form">
+    <form id="contactForm" class="contact-form">
       <input type="hidden" name="apiKey" value="sf_b116aa16dd0073f82ff5bf64">
-      <input type="hidden" name="redirectTo" value="https://loicpidoux.github.io/photo/merci.html">
+
       <label for="name">Nom</label>
       <input type="text" id="name" name="name" required>
 
@@ -25,5 +25,22 @@
       <button type="submit">Envoyer</button>
     </form>
   </main>
+
+  <script>
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = new FormData(form);
+
+      fetch('https://api.staticforms.dev/submit', {
+        method: 'POST',
+        body: data
+      }).then(() => {
+        window.location.href = 'merci.html';
+      }).catch(() => {
+        window.location.href = 'merci.html';
+      });
+    });
+  </script>
 </body>
 </html>
