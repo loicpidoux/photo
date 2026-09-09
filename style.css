@@ -213,3 +213,6 @@ body::before {
 .contact-form button:hover {
   opacity: 0.6;
 }
+.merci-text {
+  font-size: 18px;
+}
