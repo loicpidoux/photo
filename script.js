@@ -106,7 +106,6 @@ nextBtn.addEventListener('click', goNext);
 prevBtn.addEventListener('click', goPrev);
 
 closeBtn.addEventListener('click', (e) => {
-  document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
   e.preventDefault();
   closeEverything();
 });
