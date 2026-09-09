@@ -55,20 +55,23 @@ function showImage(index) {
   if (index === 0) {
     preloadRemaining(0);
   }
+  
 }
-
 function showGrid() {
   inGridView = true;
   viewer.style.display = 'none';
-  gridView.innerHTML = '';
+  const gridContainer = document.getElementById('gridContainer');
+  gridContainer.innerHTML = '';
   images.forEach((src, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
     const img = document.createElement('img');
     img.src = src;
-    img.className = 'grid-thumb';
-    img.addEventListener('click', () => showImage(i));
-    gridView.appendChild(img);
+    cell.appendChild(img);
+    cell.addEventListener('click', () => showImage(i));
+    gridContainer.appendChild(cell);
   });
-  gridView.style.display = 'grid';
+  gridView.style.display = 'block';
 }
 
 function updateArrows() {
@@ -105,6 +108,10 @@ prevBtn.addEventListener('click', goPrev);
 closeBtn.addEventListener('click', (e) => {
   e.preventDefault();
   closeEverything();
+  document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
+  e.preventDefault();
+  closeEverything();
+});
 });
 
 document.addEventListener('keydown', (e) => {
