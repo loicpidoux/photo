@@ -174,9 +174,9 @@ resizeScratchCanvas();
 window.addEventListener('resize', resizeScratchCanvas);
 
 const SCRATCH_SKIP_CHANCE = 0.5;
-const SCRATCH_MAX_OPACITY = 0.9;
+const SCRATCH_MAX_OPACITY = 0.03;
 const SCRATCH_LINE_WIDTH = 1;
-const SCRATCH_FADE_MS = 350;
+const SCRATCH_FADE_MS = 250;
 
 let scratchLastX = null;
 let scratchLastY = null;
