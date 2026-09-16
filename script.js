@@ -228,6 +228,7 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   }, SCRATCH_FADE_MS + 30);
 }
 
+/*
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
@@ -238,3 +239,4 @@ document.addEventListener('mousemove', (e) => {
   scratchLastX = x;
   scratchLastY = y;
 });
+*/
