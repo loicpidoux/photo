@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loïc Pidoux — Portfolio</title>
+  <title>Ton Nom — Portfolio</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <main class="home" id="home">
+    <canvas id="scratchCanvas"></canvas>
     <nav class="series-list">
       <a href="#" class="serie-link" data-serie="chomage">Chômage</a>
       <a href="#" class="serie-link" data-serie="gastromaniac-sa">Gastromaniac SA</a>
@@ -26,20 +27,21 @@
       <img id="mainImage" src="" alt="">
     </div>
     <button class="nav-arrow nav-next" id="nextBtn" aria-label="Image suivante">›</button>
-<button class="gallery-btn" id="galleryBtn" style="display:none;" aria-label="Voir toutes les images">
-  <svg width="28" height="28" viewBox="0 0 18 18" fill="none">
-    <rect x="1" y="1" width="7" height="7" fill="currentColor"/>
-    <rect x="10" y="1" width="7" height="7" fill="currentColor"/>
-    <rect x="1" y="10" width="7" height="7" fill="currentColor"/>
-    <rect x="10" y="10" width="7" height="7" fill="currentColor"/>
-  </svg>
-</button>
+    <button class="gallery-btn" id="galleryBtn" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <rect x="1" y="1" width="7" height="7" fill="currentColor"/>
+        <rect x="10" y="1" width="7" height="7" fill="currentColor"/>
+        <rect x="1" y="10" width="7" height="7" fill="currentColor"/>
+        <rect x="10" y="10" width="7" height="7" fill="currentColor"/>
+      </svg>
+    </button>
   </main>
-  
-<div class="grid-view" id="gridView" style="display:none;">
-  <a href="#" class="close-btn" id="closeBtnGrid">✕</a>
-  <div class="grid-container" id="gridContainer"></div>
-</div>
+
+  <div class="grid-view" id="gridView" style="display:none;">
+    <a href="#" class="close-btn" id="closeBtnGrid">✕</a>
+    <div class="grid-container" id="gridContainer"></div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
