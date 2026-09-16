@@ -163,7 +163,6 @@ document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
 
 // --- Effet de rayures lumineuses, sur tout le site sauf par-dessus les photos ---
-/*
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
@@ -239,4 +238,3 @@ document.addEventListener('mousemove', (e) => {
   scratchLastX = x;
   scratchLastY = y;
 });
-*/
