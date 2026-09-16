@@ -163,6 +163,7 @@ document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
 
 // --- Effet de rayures lumineuses, sur tout le site sauf par-dessus les photos ---
+/*
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
@@ -228,7 +229,6 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   }, SCRATCH_FADE_MS + 30);
 }
 
-/*
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
