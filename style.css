@@ -21,18 +21,35 @@ body::before {
   top: 0; left: 0;
   width: 100%;
   height: 100%;
-  background-color: #161616;
+  background-color: #f2f1ed;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.3'/%3E%3C/svg%3E");
   background-size: 200px 200px;
   background-repeat: repeat;
   z-index: -1;
 }
+
+#scratchCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
 .home {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+.series-list,
+.contact-link {
+  position: relative;
+  z-index: 1;
 }
 .series-list {
   display: flex;
@@ -41,7 +58,7 @@ body::before {
   font-size: 16px;
 }
 .serie-link {
-  color: #000000;
+  color: #1a1a1a;
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.2s ease;
@@ -52,7 +69,7 @@ body::before {
 .contact-link {
   position: absolute;
   bottom: 40px;
-  color: #000000;
+  color: #1a1a1a;
   text-decoration: underline;
   text-underline-offset: 3px;
   font-size: 16px;
@@ -60,6 +77,7 @@ body::before {
 .contact-link:hover {
   opacity: 0.5;
 }
+
 .viewer {
   height: 100vh;
   width: 100vw;
@@ -70,6 +88,8 @@ body::before {
   overflow: hidden;
 }
 .image-container {
+  position: relative;
+  z-index: 3;
   width: 100%;
   height: 100%;
   padding: 8vh 10vw;
@@ -86,11 +106,11 @@ body::before {
 .close-btn {
   position: fixed;
   top: 32px;
-  right: 54px;
+  right: 48px;
   font-size: 22px;
-  color: #000000;
+  color: #1a1a1a;
   text-decoration: none;
-  z-index: 10;
+  z-index: 1;
   transition: opacity 0.3s ease;
 }
 .nav-arrow {
@@ -100,9 +120,9 @@ body::before {
   background: none;
   border: none;
   font-size: 40px;
-  color: #000000;
+  color: #1a1a1a;
   cursor: pointer;
-  z-index: 10;
+  z-index: 1;
   padding: 20px;
   transition: opacity 0.3s ease;
 }
@@ -116,18 +136,19 @@ body::before {
 }
 .gallery-btn {
   position: fixed;
-  bottom: 44px;
-  right: 54px;
+  bottom: 32px;
+  right: 48px;
   background: none;
   border: none;
-  color: #000000;
+  color: #1a1a1a;
   cursor: pointer;
-  z-index: 10;
+  z-index: 1;
   transition: opacity 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .grid-view {
   position: fixed;
   top: 0; left: 0;
@@ -169,13 +190,13 @@ body::before {
 .grid-cell:hover img {
   opacity: 0.7;
 }
+
 .contact-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
 .contact-form {
   display: flex;
   flex-direction: column;
@@ -184,32 +205,28 @@ body::before {
   max-width: 400px;
   padding: 0 24px;
 }
-
 .contact-form label {
   font-size: 14px;
 }
-
 .contact-form input,
 .contact-form textarea {
   font-family: 'Consolas', monospace;
   font-size: 16px;
   padding: 8px;
-  border: 1px solid #000000;
+  border: 1px solid #1a1a1a;
   background: none;
-  color: #000000;
+  color: #1a1a1a;
 }
-
 .contact-form button {
   font-family: 'Consolas', monospace;
   font-size: 16px;
   padding: 10px;
   background: none;
-  border: 1px solid #000000;
-  color: #000000;
+  border: 1px solid #1a1a1a;
+  color: #1a1a1a;
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
-
 .contact-form button:hover {
   opacity: 0.6;
 }
