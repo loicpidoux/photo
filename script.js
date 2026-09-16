@@ -161,3 +161,80 @@ function resetInactivityTimer() {
 }
 document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
+
+// --- Effet de rayures lumineuses, sur tout le site sauf par-dessus les photos ---
+const scratchCanvas = document.getElementById('scratchCanvas');
+const scratchCtx = scratchCanvas.getContext('2d');
+
+function resizeScratchCanvas() {
+  scratchCanvas.width = window.innerWidth;
+  scratchCanvas.height = window.innerHeight;
+}
+resizeScratchCanvas();
+window.addEventListener('resize', resizeScratchCanvas);
+
+const SCRATCH_SKIP_CHANCE = 0.5;
+const SCRATCH_MAX_OPACITY = 0.05;
+const SCRATCH_LINE_WIDTH = 1;
+const SCRATCH_FADE_MS = 350;
+
+let scratchLastX = null;
+let scratchLastY = null;
+
+function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
+  const pad = SCRATCH_LINE_WIDTH / 2 + 2;
+  const minX = Math.min(x1, x2) - pad;
+  const minY = Math.min(y1, y2) - pad;
+  const w = Math.abs(x2 - x1) + pad * 2;
+  const h = Math.abs(y2 - y1) + pad * 2;
+
+  const mini = document.createElement('canvas');
+  mini.width = w;
+  mini.height = h;
+  mini.style.position = 'fixed';
+  mini.style.left = minX + 'px';
+  mini.style.top = minY + 'px';
+  mini.style.width = w + 'px';
+  mini.style.height = h + 'px';
+  mini.style.pointerEvents = 'none';
+  mini.style.zIndex = 2;
+  mini.style.opacity = '0';
+  mini.style.transition = `opacity ${SCRATCH_FADE_MS}ms linear`;
+  document.body.appendChild(mini);
+
+  const mctx = mini.getContext('2d');
+  mctx.strokeStyle = `rgba(255,255,255,${targetOpacity})`;
+  mctx.lineWidth = SCRATCH_LINE_WIDTH;
+  mctx.lineCap = 'round';
+  mctx.beginPath();
+  mctx.moveTo(x1 - minX, y1 - minY);
+  mctx.lineTo(x2 - minX, y2 - minY);
+  mctx.stroke();
+
+  requestAnimationFrame(() => {
+    mini.style.opacity = '1';
+  });
+
+  setTimeout(() => {
+    scratchCtx.globalCompositeOperation = 'lighter';
+    scratchCtx.strokeStyle = `rgba(255,255,255,${targetOpacity})`;
+    scratchCtx.lineWidth = SCRATCH_LINE_WIDTH;
+    scratchCtx.lineCap = 'round';
+    scratchCtx.beginPath();
+    scratchCtx.moveTo(x1, y1);
+    scratchCtx.lineTo(x2, y2);
+    scratchCtx.stroke();
+    mini.remove();
+  }, SCRATCH_FADE_MS + 30);
+}
+
+document.addEventListener('mousemove', (e) => {
+  const x = e.clientX;
+  const y = e.clientY;
+  if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
+    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
+  }
+  scratchLastX = x;
+  scratchLastY = y;
+});
