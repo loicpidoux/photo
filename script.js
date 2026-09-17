@@ -166,9 +166,24 @@ resetInactivityTimer();
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
+// CORRECTIF BUG 1 : préserver le contenu du canvas lors d'un redimensionnement
+// (notamment déclenché par l'entrée/sortie du plein écran)
 function resizeScratchCanvas() {
+  let previousImage = null;
+  if (scratchCanvas.width > 0 && scratchCanvas.height > 0) {
+    try {
+      previousImage = scratchCanvas.toDataURL('image/png');
+    } catch (e) {}
+  }
   scratchCanvas.width = window.innerWidth;
   scratchCanvas.height = window.innerHeight;
+  if (previousImage) {
+    const img = new Image();
+    img.onload = () => {
+      scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+    };
+    img.src = previousImage;
+  }
 }
 resizeScratchCanvas();
 window.addEventListener('resize', resizeScratchCanvas);
@@ -194,6 +209,33 @@ const SCRATCH_FADE_MS = 350;
 let scratchLastX = null;
 let scratchLastY = null;
 let hasUnsavedScratchChanges = false;
+
+// CORRECTIF BUG 2 : garder trace des traits pas encore "gravés",
+// pour pouvoir les graver immédiatement si la page se ferme trop vite
+const pendingStrokes = [];
+
+function bakeStroke(stroke) {
+  scratchCtx.globalCompositeOperation = 'lighter';
+  scratchCtx.strokeStyle = `rgba(255,255,255,${stroke.targetOpacity})`;
+  scratchCtx.lineWidth = SCRATCH_LINE_WIDTH;
+  scratchCtx.lineCap = 'round';
+  scratchCtx.beginPath();
+  scratchCtx.moveTo(stroke.x1, stroke.y1);
+  scratchCtx.lineTo(stroke.x2, stroke.y2);
+  scratchCtx.stroke();
+  hasUnsavedScratchChanges = true;
+}
+
+function bakeAllPending() {
+  while (pendingStrokes.length > 0) {
+    const stroke = pendingStrokes.pop();
+    clearTimeout(stroke.timeoutId);
+    if (!stroke.baked) {
+      bakeStroke(stroke);
+    }
+    if (stroke.miniEl) stroke.miniEl.remove();
+  }
+}
 
 function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
@@ -229,18 +271,17 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
     mini.style.opacity = '1';
   });
 
-  setTimeout(() => {
-    scratchCtx.globalCompositeOperation = 'lighter';
-    scratchCtx.strokeStyle = `rgba(255,255,255,${targetOpacity})`;
-    scratchCtx.lineWidth = SCRATCH_LINE_WIDTH;
-    scratchCtx.lineCap = 'round';
-    scratchCtx.beginPath();
-    scratchCtx.moveTo(x1, y1);
-    scratchCtx.lineTo(x2, y2);
-    scratchCtx.stroke();
-    hasUnsavedScratchChanges = true;
+  const strokeRecord = { x1, y1, x2, y2, targetOpacity, baked: false, miniEl: mini };
+
+  strokeRecord.timeoutId = setTimeout(() => {
+    bakeStroke(strokeRecord);
+    strokeRecord.baked = true;
     mini.remove();
+    const idx = pendingStrokes.indexOf(strokeRecord);
+    if (idx !== -1) pendingStrokes.splice(idx, 1);
   }, SCRATCH_FADE_MS + 30);
+
+  pendingStrokes.push(strokeRecord);
 }
 
 document.addEventListener('mousemove', (e) => {
@@ -268,13 +309,15 @@ function saveScratchState(useKeepalive) {
   } catch (e) {}
 }
 
-// Sauvegarde toutes les 30 secondes, sans limite de taille
 setInterval(() => saveScratchState(false), 30000);
 
-// Filet de sécurité à la fermeture, pour les derniers instants seulement
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
+    bakeAllPending();
     saveScratchState(true);
   }
 });
-window.addEventListener('pagehide', () => saveScratchState(true));
+window.addEventListener('pagehide', () => {
+  bakeAllPending();
+  saveScratchState(true);
+});
