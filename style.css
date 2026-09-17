@@ -55,7 +55,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 20px;
+  font-size: 17px;
 }
 .serie-link {
   color: #1a1a1a;
@@ -68,12 +68,12 @@ body::before {
 }
 .footer-links {
   position: absolute;
-  bottom: 40px;
+  bottom: 60px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 24px;
-  font-size: 16px;
+  gap: 40px;
+  font-size: 15px;
 }
 
 .footer-links a {
