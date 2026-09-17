@@ -238,6 +238,7 @@ function bakeStroke(stroke) {
     ctx.stroke();
   });
   hasUnsavedScratchChanges = true;
+  hasUnsavedDelta = true;
 }
 
 function bakeAllPending() {
