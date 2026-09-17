@@ -162,12 +162,14 @@ function resetInactivityTimer() {
 document.addEventListener('mousemove', resetInactivityTimer);
 resetInactivityTimer();
 
-// --- Effet de rayures lumineuses, sur tout le site sauf par-dessus les photos ---
+// --- Effet de rayures lumineuses ---
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
-// CORRECTIF BUG 1 : préserver le contenu du canvas lors d'un redimensionnement
-// (notamment déclenché par l'entrée/sortie du plein écran)
+// Canvas séparé : uniquement les traits pas encore inclus dans une sauvegarde "main"
+const deltaCanvas = document.createElement('canvas');
+const deltaCtx = deltaCanvas.getContext('2d');
+
 function resizeScratchCanvas() {
   let previousImage = null;
   if (scratchCanvas.width > 0 && scratchCanvas.height > 0) {
@@ -177,6 +179,8 @@ function resizeScratchCanvas() {
   }
   scratchCanvas.width = window.innerWidth;
   scratchCanvas.height = window.innerHeight;
+  deltaCanvas.width = window.innerWidth;
+  deltaCanvas.height = window.innerHeight;
   if (previousImage) {
     const img = new Image();
     img.onload = () => {
@@ -188,41 +192,49 @@ function resizeScratchCanvas() {
 resizeScratchCanvas();
 window.addEventListener('resize', resizeScratchCanvas);
 
-// Charger l'état partagé existant, sans bloquer l'affichage du site
+// Charger l'état partagé existant (image principale + delta laissé par un visiteur précédent)
 fetch('/scratch')
-  .then(res => res.status === 204 ? null : res.text())
-  .then(dataUrl => {
-    if (!dataUrl) return;
-    const img = new Image();
-    img.onload = () => {
-      scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
-    };
-    img.src = dataUrl;
+  .then(res => res.json())
+  .then(({ main, delta }) => {
+    if (main) {
+      const img = new Image();
+      img.onload = () => scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+      img.src = main;
+    }
+    if (delta) {
+      const img = new Image();
+      img.onload = () => {
+        scratchCtx.globalCompositeOperation = 'lighter';
+        scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+        hasUnsavedScratchChanges = true; // pour que la prochaine sauvegarde périodique absorbe ce delta
+      };
+      img.src = delta;
+    }
   })
   .catch(() => {});
 
 const SCRATCH_SKIP_CHANCE = 0.4;
 const SCRATCH_MAX_OPACITY = 0.05;
 const SCRATCH_LINE_WIDTH = 1;
-const SCRATCH_FADE_MS = 60;
+const SCRATCH_FADE_MS = 350;
 
 let scratchLastX = null;
 let scratchLastY = null;
 let hasUnsavedScratchChanges = false;
 
-// CORRECTIF BUG 2 : garder trace des traits pas encore "gravés",
-// pour pouvoir les graver immédiatement si la page se ferme trop vite
 const pendingStrokes = [];
 
 function bakeStroke(stroke) {
-  scratchCtx.globalCompositeOperation = 'lighter';
-  scratchCtx.strokeStyle = `rgba(255,255,255,${stroke.targetOpacity})`;
-  scratchCtx.lineWidth = SCRATCH_LINE_WIDTH;
-  scratchCtx.lineCap = 'round';
-  scratchCtx.beginPath();
-  scratchCtx.moveTo(stroke.x1, stroke.y1);
-  scratchCtx.lineTo(stroke.x2, stroke.y2);
-  scratchCtx.stroke();
+  [scratchCtx, deltaCtx].forEach(ctx => {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(255,255,255,${stroke.targetOpacity})`;
+    ctx.lineWidth = SCRATCH_LINE_WIDTH;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(stroke.x1, stroke.y1);
+    ctx.lineTo(stroke.x2, stroke.y2);
+    ctx.stroke();
+  });
   hasUnsavedScratchChanges = true;
 }
 
@@ -295,29 +307,43 @@ document.addEventListener('mousemove', (e) => {
   scratchLastY = y;
 });
 
-// --- Sauvegarde périodique (sans limite de taille), tant que la page est active ---
-function saveScratchState(useKeepalive) {
+// --- Sauvegarde périodique complète : capture tout, vide le delta ---
+function saveMainState() {
   if (!hasUnsavedScratchChanges) return;
   try {
     const dataUrl = scratchCanvas.toDataURL('image/png');
     fetch('/scratch', {
       method: 'POST',
-      body: dataUrl,
-      keepalive: useKeepalive
+      body: JSON.stringify({ type: 'main', dataUrl }),
+      headers: { 'Content-Type': 'application/json' }
     }).catch(() => {});
     hasUnsavedScratchChanges = false;
+    deltaCtx.clearRect(0, 0, deltaCanvas.width, deltaCanvas.height);
   } catch (e) {}
 }
 
-setInterval(() => saveScratchState(false), 30000);
+setInterval(saveMainState, 10000);
+
+// --- Sauvegarde d'urgence à la fermeture : uniquement le delta récent, toujours petit ---
+function saveDeltaState() {
+  try {
+    const dataUrl = deltaCanvas.toDataURL('image/png');
+    fetch('/scratch', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'delta', dataUrl }),
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true
+    }).catch(() => {});
+  } catch (e) {}
+}
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     bakeAllPending();
-    saveScratchState(true);
+    saveDeltaState();
   }
 });
 window.addEventListener('pagehide', () => {
   bakeAllPending();
-  saveScratchState(true);
+  saveDeltaState();
 });
