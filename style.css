@@ -241,3 +241,10 @@ body::before {
 .merci-text {
   font-size: 18px;
 }
+
+.apropos-text {
+  max-width: 500px;
+  padding: 0 24px;
+  font-size: 16px;
+  line-height: 1.6;
+}
