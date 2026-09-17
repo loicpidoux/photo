@@ -84,20 +84,23 @@ function computeGridLayout(n, containerW, containerH, gap) {
 
 function layoutGrid() {
   const gridInner = document.getElementById('gridInner');
-  const n = images.length;
+  const cells = gridInner.querySelectorAll('.grid-cell');
+  const n = cells.length;
   if (n === 0) return;
 
   const gap = 8;
-  const margin = 80; // marge de sécurité pour ne pas coller aux bords / à la croix
+  const margin = 80;
   const containerW = window.innerWidth - margin * 2;
   const containerH = window.innerHeight - margin * 2;
 
-  const { cols, rows, cellSize } = computeGridLayout(n, containerW, containerH, gap);
+  const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
 
-  gridInner.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
-  gridInner.style.gridAutoRows = `${cellSize}px`;
   gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
-  gridInner.style.height = (rows * cellSize + gap * (rows - 1)) + 'px';
+
+  cells.forEach(cell => {
+    cell.style.width = cellSize + 'px';
+    cell.style.height = cellSize + 'px';
+  });
 }
 
 function showGrid() {
