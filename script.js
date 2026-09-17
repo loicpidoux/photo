@@ -268,8 +268,10 @@ function saveScratchState(useKeepalive) {
   } catch (e) {}
 }
 
+// Sauvegarde toutes les 30 secondes, sans limite de taille
 setInterval(() => saveScratchState(false), 30000);
 
+// Filet de sécurité à la fermeture, pour les derniers instants seulement
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     saveScratchState(true);
