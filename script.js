@@ -338,6 +338,7 @@ function saveDeltaState() {
       headers: { 'Content-Type': 'application/json' },
       keepalive: true
     }).catch(() => {});
+    hasUnsavedDelta = false;
   } catch (e) {}
 }
 
