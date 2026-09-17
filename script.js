@@ -68,12 +68,44 @@ function showImage(index) {
   }
 }
 
+function computeGridLayout(n, containerW, containerH, gap) {
+  let best = { cols: 1, rows: n, cellSize: 0 };
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const cellW = (containerW - gap * (cols - 1)) / cols;
+    const cellH = (containerH - gap * (rows - 1)) / rows;
+    const cellSize = Math.min(cellW, cellH);
+    if (cellSize > best.cellSize) {
+      best = { cols, rows, cellSize };
+    }
+  }
+  return best;
+}
+
+function layoutGrid() {
+  const gridInner = document.getElementById('gridInner');
+  const n = images.length;
+  if (n === 0) return;
+
+  const gap = 8;
+  const margin = 80; // marge de sécurité pour ne pas coller aux bords / à la croix
+  const containerW = window.innerWidth - margin * 2;
+  const containerH = window.innerHeight - margin * 2;
+
+  const { cols, rows, cellSize } = computeGridLayout(n, containerW, containerH, gap);
+
+  gridInner.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  gridInner.style.gridAutoRows = `${cellSize}px`;
+  gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
+  gridInner.style.height = (rows * cellSize + gap * (rows - 1)) + 'px';
+}
+
 function showGrid() {
   inGridView = true;
   hasSeenGrid = true;
   viewer.style.display = 'none';
-  const gridContainer = document.getElementById('gridContainer');
-  gridContainer.innerHTML = '';
+  const gridInner = document.getElementById('gridInner');
+  gridInner.innerHTML = '';
   images.forEach((src, i) => {
     const cell = document.createElement('div');
     cell.className = 'grid-cell';
@@ -84,10 +116,15 @@ function showGrid() {
       ensureFullscreen();
       showImage(i);
     });
-    gridContainer.appendChild(cell);
+    gridInner.appendChild(cell);
   });
-  gridView.style.display = 'block';
+  gridView.style.display = 'flex';
+  layoutGrid();
 }
+
+window.addEventListener('resize', () => {
+  if (inGridView) layoutGrid();
+});
 
 function updateArrows() {
   prevBtn.style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
