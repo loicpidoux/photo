@@ -166,7 +166,6 @@ body::before {
   display: grid;
   gap: 8px;
   justify-content: center;
-
 }
 
 .grid-cell {
