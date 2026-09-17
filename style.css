@@ -66,15 +66,22 @@ body::before {
 .serie-link:hover {
   opacity: 0.5;
 }
-.contact-link {
+.footer-links {
   position: absolute;
   bottom: 40px;
-  color: #1a1a1a;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  font-size: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  font-size: 14px;
 }
-.contact-link:hover {
+
+.footer-links a {
+  color: #1a1a1a;
+  text-decoration: none;
+}
+
+.footer-links a:hover {
   opacity: 0.5;
 }
 
