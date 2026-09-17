@@ -206,7 +206,9 @@ fetch('/scratch')
       img.onload = () => {
         scratchCtx.globalCompositeOperation = 'lighter';
         scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
-        hasUnsavedScratchChanges = true; // pour que la prochaine sauvegarde périodique absorbe ce delta
+        deltaCtx.globalCompositeOperation = 'lighter';
+        deltaCtx.drawImage(img, 0, 0, deltaCanvas.width, deltaCanvas.height);
+        hasUnsavedScratchChanges = true;
       };
       img.src = delta;
     }
