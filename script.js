@@ -173,13 +173,27 @@ function resizeScratchCanvas() {
 resizeScratchCanvas();
 window.addEventListener('resize', resizeScratchCanvas);
 
+// Charger l'état partagé existant, sans bloquer l'affichage du site
+fetch('/scratch')
+  .then(res => res.status === 204 ? null : res.text())
+  .then(dataUrl => {
+    if (!dataUrl) return;
+    const img = new Image();
+    img.onload = () => {
+      scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+    };
+    img.src = dataUrl;
+  })
+  .catch(() => {});
+
 const SCRATCH_SKIP_CHANCE = 0.4;
 const SCRATCH_MAX_OPACITY = 0.05;
 const SCRATCH_LINE_WIDTH = 1;
-const SCRATCH_FADE_MS = 60;
+const SCRATCH_FADE_MS = 350;
 
 let scratchLastX = null;
 let scratchLastY = null;
+let hasUnsavedScratchChanges = false;
 
 function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
@@ -224,6 +238,7 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
     scratchCtx.moveTo(x1, y1);
     scratchCtx.lineTo(x2, y2);
     scratchCtx.stroke();
+    hasUnsavedScratchChanges = true;
     mini.remove();
   }, SCRATCH_FADE_MS + 30);
 }
@@ -238,3 +253,26 @@ document.addEventListener('mousemove', (e) => {
   scratchLastX = x;
   scratchLastY = y;
 });
+
+// --- Sauvegarde périodique (sans limite de taille), tant que la page est active ---
+function saveScratchState(useKeepalive) {
+  if (!hasUnsavedScratchChanges) return;
+  try {
+    const dataUrl = scratchCanvas.toDataURL('image/png');
+    fetch('/scratch', {
+      method: 'POST',
+      body: dataUrl,
+      keepalive: useKeepalive
+    }).catch(() => {});
+    hasUnsavedScratchChanges = false;
+  } catch (e) {}
+}
+
+setInterval(() => saveScratchState(false), 30000);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    saveScratchState(true);
+  }
+});
+window.addEventListener('pagehide', () => saveScratchState(true));
