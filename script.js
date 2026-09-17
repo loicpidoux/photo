@@ -328,7 +328,6 @@ setInterval(saveMainState, 10000);
 
 // --- Sauvegarde d'urgence à la fermeture : uniquement le delta récent, toujours petit ---
 function saveDeltaState() {
-  console.log('saveDeltaState appelée !');
   if (!hasUnsavedDelta) return;
   try {
     const dataUrl = deltaCanvas.toDataURL('image/png');
