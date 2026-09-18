@@ -339,15 +339,49 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   pendingStrokes.push(strokeRecord);
 }
 
+const SCRATCH_SEGMENT_LENGTH = 15; // pixels parcourus avant chaque décision
+const SCRATCH_SLOW_SPEED = 300;    // px/s : en dessous, comportement normal
+const SCRATCH_FAST_SPEED = 2000;   // px/s : au-dessus, intensité maximale boostée
+const SCRATCH_SPEED_BOOST_MAX = 2; // multiplicateur d'intensité au maximum de vitesse
+
+let scratchAccumX = null;
+let scratchAccumY = null;
+let scratchAccumStartTime = null;
+
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
-  if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
-    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
-    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
+
+  if (scratchAccumX === null) {
+    scratchAccumX = x;
+    scratchAccumY = y;
+    scratchAccumStartTime = performance.now();
+    return;
   }
-  scratchLastX = x;
-  scratchLastY = y;
+
+  const dx = x - scratchAccumX;
+  const dy = y - scratchAccumY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  if (distance >= SCRATCH_SEGMENT_LENGTH) {
+    const now = performance.now();
+    const elapsedSeconds = (now - scratchAccumStartTime) / 1000;
+    const speed = elapsedSeconds > 0 ? distance / elapsedSeconds : 0;
+
+    if (Math.random() >= SCRATCH_SKIP_CHANCE) {
+      const speedRatio = Math.min(
+        1,
+        Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
+      );
+      const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
+      const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
+      spawnFadingStroke(scratchAccumX, scratchAccumY, x, y, targetOpacity);
+    }
+
+    scratchAccumX = x;
+    scratchAccumY = y;
+    scratchAccumStartTime = now;
+  }
 });
 
 // --- Sauvegarde périodique complète : capture tout, vide le delta ---
