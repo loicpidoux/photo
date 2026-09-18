@@ -342,6 +342,8 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   pendingStrokes.push(strokeRecord);
 }
 
+const SCRATCH_SKIP_CHANCE = 0.35;
+
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
@@ -354,14 +356,15 @@ document.addEventListener('mousemove', (e) => {
     const elapsedSeconds = scratchLastMoveTime !== null ? (now - scratchLastMoveTime) / 1000 : 0;
     const speed = elapsedSeconds > 0 ? distance / elapsedSeconds : 0;
 
-    const speedRatio = Math.min(
-      1,
-      Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
-    );
-    const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
-    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
-
-    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
+    if (Math.random() >= SCRATCH_SKIP_CHANCE) {
+      const speedRatio = Math.min(
+        1,
+        Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
+      );
+      const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
+      const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
+      spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
+    }
   }
 
   scratchLastX = x;
