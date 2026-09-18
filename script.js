@@ -342,7 +342,7 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   pendingStrokes.push(strokeRecord);
 }
 
-const SCRATCH_SKIP_CHANCE = 0.7;
+const SCRATCH_SKIP_CHANCE = 0.5;
 
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
