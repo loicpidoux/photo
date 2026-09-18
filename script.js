@@ -255,8 +255,8 @@ fetch('/scratch')
   })
   .catch(() => {});
 
-const SCRATCH_SKIP_CHANCE = 0.9;
-const SCRATCH_MAX_OPACITY = 0.2;
+const SCRATCH_SKIP_CHANCE = 0.2;
+const SCRATCH_MAX_OPACITY = 0.5;
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
 
