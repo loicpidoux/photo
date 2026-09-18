@@ -254,12 +254,12 @@ fetch('/scratch')
   })
   .catch(() => {});
 
-const SCRATCH_MAX_OPACITY = 0.5;
+const SCRATCH_MAX_OPACITY = 0.05;
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
 const SCRATCH_SLOW_SPEED = 300;
 const SCRATCH_FAST_SPEED = 2000;
-const SCRATCH_SPEED_BOOST_MAX = 2;
+const SCRATCH_SPEED_BOOST_MAX = 1.3;
 
 let scratchLastX = null;
 let scratchLastY = null;
