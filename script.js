@@ -255,7 +255,6 @@ fetch('/scratch')
   })
   .catch(() => {});
 
-const SCRATCH_SKIP_CHANCE = 0.2;
 const SCRATCH_MAX_OPACITY = 0.5;
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
@@ -349,41 +348,39 @@ let scratchAccumY = null;
 let scratchAccumStartTime = null;
 
 document.addEventListener('mousemove', (e) => {
+ const SCRATCH_MIN_OPACITY_FLOOR = 0; // peut descendre jusqu'à quasi invisible
+const SCRATCH_SLOW_SPEED = 300;
+const SCRATCH_FAST_SPEED = 2000;
+const SCRATCH_SPEED_BOOST_MAX = 2;
+
+let scratchLastMoveTime = null;
+
+document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
+  const now = performance.now();
 
-  if (scratchAccumX === null) {
-    scratchAccumX = x;
-    scratchAccumY = y;
-    scratchAccumStartTime = performance.now();
-    return;
-  }
-
-  const dx = x - scratchAccumX;
-  const dy = y - scratchAccumY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-
-  if (distance >= SCRATCH_SEGMENT_LENGTH) {
-    const now = performance.now();
-    const elapsedSeconds = (now - scratchAccumStartTime) / 1000;
+  if (scratchLastX !== null) {
+    const dx = x - scratchLastX;
+    const dy = y - scratchLastY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const elapsedSeconds = scratchLastMoveTime !== null ? (now - scratchLastMoveTime) / 1000 : 0;
     const speed = elapsedSeconds > 0 ? distance / elapsedSeconds : 0;
 
-    if (Math.random() >= SCRATCH_SKIP_CHANCE) {
-      const speedRatio = Math.min(
-        1,
-        Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
-      );
-      const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
-      const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
-      spawnFadingStroke(scratchAccumX, scratchAccumY, x, y, targetOpacity);
-    }
+    const speedRatio = Math.min(
+      1,
+      Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
+    );
+    const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
+    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
 
-    scratchAccumX = x;
-    scratchAccumY = y;
-    scratchAccumStartTime = now;
+    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
   }
-});
 
+  scratchLastX = x;
+  scratchLastY = y;
+  scratchLastMoveTime = now;
+});
 // --- Sauvegarde périodique complète : capture tout, vide le delta ---
 function saveMainState() {
   if (!hasUnsavedScratchChanges) return;
