@@ -206,7 +206,6 @@ resetInactivityTimer();
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
-// Canvas séparé : uniquement les traits pas encore inclus dans une sauvegarde "main"
 const deltaCanvas = document.createElement('canvas');
 const deltaCtx = deltaCanvas.getContext('2d');
 
@@ -232,7 +231,6 @@ function resizeScratchCanvas() {
 resizeScratchCanvas();
 window.addEventListener('resize', resizeScratchCanvas);
 
-// Charger l'état partagé existant (image principale + delta laissé par un visiteur précédent)
 fetch('/scratch')
   .then(res => res.json())
   .then(({ main, delta }) => {
@@ -249,6 +247,7 @@ fetch('/scratch')
         deltaCtx.globalCompositeOperation = 'lighter';
         deltaCtx.drawImage(img, 0, 0, deltaCanvas.width, deltaCanvas.height);
         hasUnsavedScratchChanges = true;
+        hasUnsavedDelta = true;
       };
       img.src = delta;
     }
@@ -258,10 +257,15 @@ fetch('/scratch')
 const SCRATCH_MAX_OPACITY = 0.5;
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
+const SCRATCH_SLOW_SPEED = 300;
+const SCRATCH_FAST_SPEED = 2000;
+const SCRATCH_SPEED_BOOST_MAX = 2;
 
 let scratchLastX = null;
 let scratchLastY = null;
+let scratchLastMoveTime = null;
 let hasUnsavedScratchChanges = false;
+let hasUnsavedDelta = false;
 
 const pendingStrokes = [];
 
@@ -294,132 +298,4 @@ function bakeAllPending() {
 function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
   const minX = Math.min(x1, x2) - pad;
-  const minY = Math.min(y1, y2) - pad;
-  const w = Math.abs(x2 - x1) + pad * 2;
-  const h = Math.abs(y2 - y1) + pad * 2;
-
-  const mini = document.createElement('canvas');
-  mini.width = w;
-  mini.height = h;
-  mini.style.position = 'fixed';
-  mini.style.left = minX + 'px';
-  mini.style.top = minY + 'px';
-  mini.style.width = w + 'px';
-  mini.style.height = h + 'px';
-  mini.style.pointerEvents = 'none';
-  mini.style.zIndex = 2;
-  mini.style.opacity = '0';
-  mini.style.transition = `opacity ${SCRATCH_FADE_MS}ms linear`;
-  document.body.appendChild(mini);
-
-  const mctx = mini.getContext('2d');
-  mctx.strokeStyle = `rgba(255,255,255,${targetOpacity})`;
-  mctx.lineWidth = SCRATCH_LINE_WIDTH;
-  mctx.lineCap = 'round';
-  mctx.beginPath();
-  mctx.moveTo(x1 - minX, y1 - minY);
-  mctx.lineTo(x2 - minX, y2 - minY);
-  mctx.stroke();
-
-  requestAnimationFrame(() => {
-    mini.style.opacity = '1';
-  });
-
-  const strokeRecord = { x1, y1, x2, y2, targetOpacity, baked: false, miniEl: mini };
-
-  strokeRecord.timeoutId = setTimeout(() => {
-    bakeStroke(strokeRecord);
-    strokeRecord.baked = true;
-    mini.remove();
-    const idx = pendingStrokes.indexOf(strokeRecord);
-    if (idx !== -1) pendingStrokes.splice(idx, 1);
-  }, SCRATCH_FADE_MS + 30);
-
-  pendingStrokes.push(strokeRecord);
-}
-
-const SCRATCH_SEGMENT_LENGTH = 15; // pixels parcourus avant chaque décision
-const SCRATCH_SLOW_SPEED = 300;    // px/s : en dessous, comportement normal
-const SCRATCH_FAST_SPEED = 2000;   // px/s : au-dessus, intensité maximale boostée
-const SCRATCH_SPEED_BOOST_MAX = 2; // multiplicateur d'intensité au maximum de vitesse
-
-let scratchAccumX = null;
-let scratchAccumY = null;
-let scratchAccumStartTime = null;
-
-document.addEventListener('mousemove', (e) => {
- const SCRATCH_MIN_OPACITY_FLOOR = 0; // peut descendre jusqu'à quasi invisible
-const SCRATCH_SLOW_SPEED = 300;
-const SCRATCH_FAST_SPEED = 2000;
-const SCRATCH_SPEED_BOOST_MAX = 2;
-
-let scratchLastMoveTime = null;
-
-document.addEventListener('mousemove', (e) => {
-  const x = e.clientX;
-  const y = e.clientY;
-  const now = performance.now();
-
-  if (scratchLastX !== null) {
-    const dx = x - scratchLastX;
-    const dy = y - scratchLastY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const elapsedSeconds = scratchLastMoveTime !== null ? (now - scratchLastMoveTime) / 1000 : 0;
-    const speed = elapsedSeconds > 0 ? distance / elapsedSeconds : 0;
-
-    const speedRatio = Math.min(
-      1,
-      Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
-    );
-    const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
-    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
-
-    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
-  }
-
-  scratchLastX = x;
-  scratchLastY = y;
-  scratchLastMoveTime = now;
-});
-// --- Sauvegarde périodique complète : capture tout, vide le delta ---
-function saveMainState() {
-  if (!hasUnsavedScratchChanges) return;
-  try {
-    const dataUrl = scratchCanvas.toDataURL('image/png');
-    fetch('/scratch', {
-      method: 'POST',
-      body: JSON.stringify({ type: 'main', dataUrl }),
-      headers: { 'Content-Type': 'application/json' }
-    }).catch(() => {});
-    hasUnsavedScratchChanges = false;
-    deltaCtx.clearRect(0, 0, deltaCanvas.width, deltaCanvas.height);
-  } catch (e) {}
-}
-
-setInterval(saveMainState, 10000);
-
-// --- Sauvegarde d'urgence à la fermeture : uniquement le delta récent, toujours petit ---
-function saveDeltaState() {
-  if (!hasUnsavedDelta) return;
-  try {
-    const dataUrl = deltaCanvas.toDataURL('image/png');
-    fetch('/scratch', {
-      method: 'POST',
-      body: JSON.stringify({ type: 'delta', dataUrl }),
-      headers: { 'Content-Type': 'application/json' },
-      keepalive: true
-    }).catch(() => {});
-    hasUnsavedDelta = false;
-  } catch (e) {}
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    bakeAllPending();
-    saveDeltaState();
-  }
-});
-window.addEventListener('pagehide', () => {
-  bakeAllPending();
-  saveDeltaState();
-});
+  const minY = Math.min(y1, y2) -
