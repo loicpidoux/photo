@@ -66,17 +66,6 @@ body::before {
 }
 .serie-link:hover {
   opacity: 0.5;
-}
-.footer-links {
-  position: absolute;
-  bottom: 54px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 90px;
-  font-size: 15px;
-}
-
 .footer-links {
   position: absolute;
   bottom: 40px;
@@ -107,7 +96,7 @@ body::before {
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 }
-
+  
 .viewer {
   height: 100vh;
   width: 100vw;
