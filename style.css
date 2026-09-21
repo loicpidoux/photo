@@ -28,36 +28,39 @@ body::before {
   z-index: -1;
 }
 
-#scratchCanvas {
+/* --- Cadre de référence fixe : fond des rayures + textes alignés dessus --- */
+.reference-frame {
   position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 1920px;
+  height: 1140px;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  z-index: 0;
+}
+
+#scratchCanvas {
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
+  width: 1920px;
+  height: 1140px;
   pointer-events: none;
 }
 
-.home {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 40vh;
-  position: relative;
-}
-.series-list,
-.contact-link {
-  position: relative;
-  z-index: 1;
-}
 .series-list {
+  position: absolute;
+  top: 456px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 17px;
+  font-size: 20px;
+  z-index: 1;
 }
+
 .serie-link {
   color: #1a1a1a;
   text-decoration: underline;
@@ -68,41 +71,54 @@ body::before {
   opacity: 0.5;
 }
 
-@media (max-width: 600px) {
-  .home {
-    padding-top: 15vh;
-  }
-}
-
-.footer-links {
+.footer-links-desktop {
   position: absolute;
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 90px;
   font-size: 14px;
+  z-index: 1;
+}
+.footer-links-desktop a {
+  color: #1a1a1a;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.footer-links-desktop a:hover {
+  opacity: 0.5;
 }
 
-.footer-links a {
+/* --- Liens mobile, indépendants du cadre --- */
+.footer-links-mobile {
+  display: none;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  z-index: 4;
+}
+.footer-links-mobile a {
   color: #1a1a1a;
   text-decoration: none;
   white-space: nowrap;
 }
 
-.footer-links a:hover {
-  opacity: 0.5;
+@media (max-width: 600px) {
+  .footer-links-desktop { display: none !important; }
+  .footer-links-mobile { display: flex; }
 }
 
-@media (max-width: 600px) {
-  .footer-links {
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-  }
+/* --- Masquage pendant qu'on regarde une série/grille --- */
+body.viewing-serie .series-list,
+body.viewing-serie .footer-links-desktop,
+body.viewing-serie .footer-links-mobile {
+  display: none !important;
 }
 
 .viewer {
@@ -112,6 +128,7 @@ body::before {
   align-items: center;
   justify-content: center;
   position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 .image-container {
@@ -138,7 +155,7 @@ body::before {
   font-size: 22px;
   color: #1a1a1a;
   text-decoration: none;
-  z-index: 1;
+  z-index: 2;
   transition: opacity 0.3s ease;
 }
 .nav-arrow {
@@ -150,7 +167,7 @@ body::before {
   font-size: 40px;
   color: #1a1a1a;
   cursor: pointer;
-  z-index: 1;
+  z-index: 2;
   padding: 20px;
   transition: opacity 0.3s ease;
 }
@@ -170,7 +187,7 @@ body::before {
   border: none;
   color: #1a1a1a;
   cursor: pointer;
-  z-index: 1;
+  z-index: 2;
   transition: opacity 0.3s ease;
   display: flex;
   align-items: center;
@@ -188,7 +205,6 @@ body::before {
   align-items: center;
   justify-content: center;
 }
-
 @media (max-width: 600px) {
   .grid-view {
     align-items: flex-start;
@@ -196,6 +212,7 @@ body::before {
     padding-bottom: 40px;
   }
 }
+
 .grid-inner {
   display: flex;
   flex-wrap: wrap;
@@ -221,7 +238,6 @@ body::before {
   object-fit: contain;
   transition: opacity 0.2s ease;
 }
-
 .grid-cell:hover img {
   opacity: 0.7;
 }
@@ -268,17 +284,9 @@ body::before {
 .merci-text {
   font-size: 18px;
 }
-
 .apropos-text {
   max-width: 500px;
   padding: 0 24px;
   font-size: 16px;
   line-height: 1.6;
-}
-
-.touch-device .serie-link:hover,
-.touch-device .footer-links a:hover,
-.touch-device .contact-form button:hover,
-.touch-device .grid-cell:hover img {
-  opacity: 1;
 }
