@@ -259,6 +259,14 @@ const SCRATCH_MAX_OPACITY = 0.035;
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
 
+const SCRATCH_INTRO_MIN_MS = 4000;
+const SCRATCH_INTRO_MAX_MS = 10000;
+const SCRATCH_BOOST_OPACITY = 0.4;
+const SCRATCH_RANDOM_BOOST_CHANCE = 0.01;
+
+const scratchPageLoadTime = performance.now();
+let scratchIntroBoostDone = false;
+
 let scratchLastX = null;
 let scratchLastY = null;
 let hasUnsavedScratchChanges = false;
@@ -342,10 +350,23 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
+
   if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
-    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+    let targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+
+    const elapsedSincePageLoad = performance.now() - scratchPageLoadTime;
+    const isInIntroWindow = elapsedSincePageLoad >= SCRATCH_INTRO_MIN_MS && elapsedSincePageLoad <= SCRATCH_INTRO_MAX_MS;
+
+    if (isInIntroWindow && !scratchIntroBoostDone) {
+      targetOpacity = SCRATCH_BOOST_OPACITY;
+      scratchIntroBoostDone = true;
+    } else if (Math.random() < SCRATCH_RANDOM_BOOST_CHANCE) {
+      targetOpacity = SCRATCH_BOOST_OPACITY;
+    }
+
     spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
   }
+
   scratchLastX = x;
   scratchLastY = y;
 });
