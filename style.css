@@ -77,13 +77,33 @@ body::before {
   font-size: 15px;
 }
 
+.footer-links {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 90px;
+  font-size: 14px;
+}
+
 .footer-links a {
   color: #1a1a1a;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .footer-links a:hover {
   opacity: 0.5;
+}
+
+@media (max-width: 600px) {
+  .footer-links {
+    gap: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .viewer {
