@@ -3,26 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>☭ Qu'est-ce que c'est que cette merde ?</title>
+  <title>Ton Nom — Portfolio</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <canvas id="scratchCanvas"></canvas>
+  <div class="reference-frame" id="referenceFrame">
+    <canvas id="scratchCanvas" width="1920" height="1140"></canvas>
+    <nav class="series-list" id="seriesList">
+      <a href="#" class="serie-link" data-serie="chomage">Chômage</a>
+      <a href="#" class="serie-link" data-serie="gastromaniac-sa">Gastromaniac SA</a>
+      <a href="#" class="serie-link" data-serie="av-de-cour-42">Av. de Cour 42</a>
+      <a href="#" class="serie-link" data-serie="2020">2020</a>
+      <a href="#" class="serie-link" data-serie="colonnes">Colonnes</a>
+    </nav>
+    <div class="footer-links-desktop" id="footerLinksDesktop">
+      <a href="apropos.html">[à propos]</a>
+      <a href="contact.html">[contact]</a>
+    </div>
+  </div>
 
-<main class="home" id="home">
-  <nav class="series-list">
-    <a href="#" class="serie-link" data-serie="chomage">Chômage</a>
-    <a href="#" class="serie-link" data-serie="gastromaniac-sa">Gastromaniac SA</a>
-    <a href="#" class="serie-link" data-serie="av-de-cour-42">Av. de Cour 42</a>
-    <a href="#" class="serie-link" data-serie="2020">2020</a>
-    <a href="#" class="serie-link" data-serie="colonnes">Colonnes</a>
-  </nav>
-  <div class="footer-links">
+  <div class="footer-links-mobile" id="footerLinksMobile">
     <a href="apropos.html">[à propos]</a>
     <a href="contact.html">[contact]</a>
   </div>
-</main>
 
   <main class="viewer" id="viewer" style="display:none;">
     <a href="#" class="close-btn" id="closeBtn">✕</a>
@@ -44,8 +48,9 @@
   <div class="grid-view" id="gridView" style="display:none;">
     <a href="#" class="close-btn" id="closeBtnGrid">✕</a>
     <div class="grid-container" id="gridContainer">
-  <div class="grid-inner" id="gridInner"></div>
-</div>
+      <div class="grid-inner" id="gridInner"></div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
