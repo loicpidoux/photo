@@ -254,16 +254,13 @@ fetch('/scratch')
   })
   .catch(() => {});
 
-const SCRATCH_MAX_OPACITY = 0.05;
+const SCRATCH_SKIP_CHANCE = 0.4;
+const SCRATCH_MAX_OPACITY = 0.035;
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
-const SCRATCH_SLOW_SPEED = 300;
-const SCRATCH_FAST_SPEED = 2000;
-const SCRATCH_SPEED_BOOST_MAX = 1.3;
 
 let scratchLastX = null;
 let scratchLastY = null;
-let scratchLastMoveTime = null;
 let hasUnsavedScratchChanges = false;
 let hasUnsavedDelta = false;
 
@@ -342,34 +339,15 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   pendingStrokes.push(strokeRecord);
 }
 
-const SCRATCH_SKIP_CHANCE = 0.5;
-
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX;
   const y = e.clientY;
-  const now = performance.now();
-
-  if (scratchLastX !== null) {
-    const dx = x - scratchLastX;
-    const dy = y - scratchLastY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const elapsedSeconds = scratchLastMoveTime !== null ? (now - scratchLastMoveTime) / 1000 : 0;
-    const speed = elapsedSeconds > 0 ? distance / elapsedSeconds : 0;
-
-    if (Math.random() >= SCRATCH_SKIP_CHANCE) {
-      const speedRatio = Math.min(
-        1,
-        Math.max(0, (speed - SCRATCH_SLOW_SPEED) / (SCRATCH_FAST_SPEED - SCRATCH_SLOW_SPEED))
-      );
-      const speedMultiplier = 1 + speedRatio * (SCRATCH_SPEED_BOOST_MAX - 1);
-      const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY * speedMultiplier;
-      spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
-    }
+  if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
+    const targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
   }
-
   scratchLastX = x;
   scratchLastY = y;
-  scratchLastMoveTime = now;
 });
 
 function saveMainState() {
