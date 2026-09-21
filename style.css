@@ -189,6 +189,13 @@ body::before {
   justify-content: center;
 }
 
+@media (max-width: 600px) {
+  .grid-view {
+    align-items: flex-start;
+    padding-top: 60px;
+    padding-bottom: 40px;
+  }
+}
 .grid-inner {
   display: flex;
   flex-wrap: wrap;
