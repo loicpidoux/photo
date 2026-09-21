@@ -98,6 +98,21 @@ function layoutGrid() {
   if (n === 0) return;
 
   const gap = 8;
+
+  if (isMobileDevice()) {
+    const containerW = window.innerWidth - 32;
+    const cols = containerW < 500 ? 2 : 3;
+    const cellSize = (containerW - gap * (cols - 1)) / cols;
+
+    gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
+
+    cells.forEach(cell => {
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+    });
+    return;
+  }
+
   const margin = 80;
   const containerW = window.innerWidth - margin * 2;
   const containerH = window.innerHeight - margin * 2;
