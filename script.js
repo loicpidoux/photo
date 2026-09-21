@@ -1,3 +1,11 @@
+function isMobileDevice() {
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
+if (isMobileDevice()) {
+  document.body.classList.add('touch-device');
+}
+
 const home = document.getElementById('home');
 const viewer = document.getElementById('viewer');
 const gridView = document.getElementById('gridView');
@@ -16,7 +24,7 @@ document.querySelectorAll('.serie-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
     const serieName = link.dataset.serie;
-    if (document.documentElement.requestFullscreen) {
+    if (!isMobileDevice() && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
     openSerie(serieName);
@@ -49,6 +57,7 @@ function closeEverything() {
 }
 
 function ensureFullscreen() {
+  if (isMobileDevice()) return;
   const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
   if (isViewingSerie && !document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
@@ -190,6 +199,44 @@ document.addEventListener('click', () => {
   ensureFullscreen();
 });
 
+// --- Navigation par balayage (swipe) sur mobile ---
+let swipeStartX = null;
+let swipeStartY = null;
+const SWIPE_MIN_DISTANCE = 50;
+
+document.addEventListener('touchstart', (e) => {
+  const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isActive || inGridView) return;
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (swipeStartX === null) return;
+  const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isActive || inGridView) {
+    swipeStartX = null;
+    swipeStartY = null;
+    return;
+  }
+
+  const endX = e.changedTouches[0].clientX;
+  const endY = e.changedTouches[0].clientY;
+  const dx = endX - swipeStartX;
+  const dy = endY - swipeStartY;
+
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_DISTANCE) {
+    if (dx < 0) {
+      goNext();
+    } else {
+      goPrev();
+    }
+  }
+
+  swipeStartX = null;
+  swipeStartY = null;
+});
+
 let inactivityTimer;
 function resetInactivityTimer() {
   if (inGridView) return;
@@ -200,6 +247,7 @@ function resetInactivityTimer() {
   }, 2000);
 }
 document.addEventListener('mousemove', resetInactivityTimer);
+document.addEventListener('touchstart', resetInactivityTimer);
 resetInactivityTimer();
 
 // --- Effet de rayures lumineuses ---
@@ -353,10 +401,7 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   pendingStrokes.push(strokeRecord);
 }
 
-document.addEventListener('mousemove', (e) => {
-  const x = e.clientX;
-  const y = e.clientY;
-
+function processScratchPoint(x, y) {
   if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
     let targetOpacity;
 
@@ -386,7 +431,24 @@ document.addEventListener('mousemove', (e) => {
 
   scratchLastX = x;
   scratchLastY = y;
+}
+
+document.addEventListener('mousemove', (e) => {
+  processScratchPoint(e.clientX, e.clientY);
 });
+
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) {
+    processScratchPoint(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: true });
+
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) {
+    scratchLastX = e.touches[0].clientX;
+    scratchLastY = e.touches[0].clientY;
+  }
+}, { passive: true });
 
 function saveMainState() {
   if (!hasUnsavedScratchChanges) return;
