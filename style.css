@@ -66,6 +66,7 @@ body::before {
 }
 .serie-link:hover {
   opacity: 0.5;
+  
 .footer-links {
   position: absolute;
   bottom: 40px;
@@ -93,7 +94,7 @@ body::before {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* plus grand qu'avant */
   }
 }
   
