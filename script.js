@@ -261,8 +261,14 @@ const SCRATCH_FADE_MS = 60;
 
 const SCRATCH_INTRO_MIN_MS = 4000;
 const SCRATCH_INTRO_MAX_MS = 10000;
-const SCRATCH_BOOST_OPACITY = 0.4;
+const SCRATCH_BOOST_OPACITY_MIN = 0.3;
+const SCRATCH_BOOST_OPACITY_MAX = 0.5;
 const SCRATCH_RANDOM_BOOST_CHANCE = 0.01;
+
+const SCRATCH_STROKE_GROUP_SIZE_MIN = 3;
+const SCRATCH_STROKE_GROUP_SIZE_MAX = 8;
+let scratchGroupRemaining = 0;
+let scratchGroupOpacity = 0;
 
 const scratchPageLoadTime = performance.now();
 let scratchIntroBoostDone = false;
@@ -352,16 +358,27 @@ document.addEventListener('mousemove', (e) => {
   const y = e.clientY;
 
   if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
-    let targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+    let targetOpacity;
+
+    if (scratchGroupRemaining > 0) {
+      targetOpacity = scratchGroupOpacity;
+      scratchGroupRemaining--;
+    } else {
+      targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+      scratchGroupOpacity = targetOpacity;
+      scratchGroupRemaining = Math.floor(
+        SCRATCH_STROKE_GROUP_SIZE_MIN + Math.random() * (SCRATCH_STROKE_GROUP_SIZE_MAX - SCRATCH_STROKE_GROUP_SIZE_MIN)
+      );
+    }
 
     const elapsedSincePageLoad = performance.now() - scratchPageLoadTime;
     const isInIntroWindow = elapsedSincePageLoad >= SCRATCH_INTRO_MIN_MS && elapsedSincePageLoad <= SCRATCH_INTRO_MAX_MS;
 
     if (isInIntroWindow && !scratchIntroBoostDone) {
-      targetOpacity = SCRATCH_BOOST_OPACITY;
+      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
       scratchIntroBoostDone = true;
     } else if (Math.random() < SCRATCH_RANDOM_BOOST_CHANCE) {
-      targetOpacity = SCRATCH_BOOST_OPACITY;
+      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
     }
 
     spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
