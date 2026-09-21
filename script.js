@@ -206,7 +206,7 @@ const SWIPE_MIN_DISTANCE = 50;
 
 document.addEventListener('touchstart', (e) => {
   const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
-  if (!isActive || inGridView) return;
+  if (!isActive) return;
   swipeStartX = e.touches[0].clientX;
   swipeStartY = e.touches[0].clientY;
 }, { passive: true });
@@ -214,7 +214,7 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchend', (e) => {
   if (swipeStartX === null) return;
   const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
-  if (!isActive || inGridView) {
+  if (!isActive) {
     swipeStartX = null;
     swipeStartY = null;
     return;
@@ -226,9 +226,9 @@ document.addEventListener('touchend', (e) => {
   const dy = endY - swipeStartY;
 
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_DISTANCE) {
-    if (dx < 0) {
+    if (dx < 0 && !inGridView) {
       goNext();
-    } else {
+    } else if (dx > 0) {
       goPrev();
     }
   }
