@@ -2,11 +2,27 @@ function isMobileDevice() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
 
-if (isMobileDevice()) {
-  document.body.classList.add('touch-device');
+const REF_W = 1920;
+const REF_H = 1140;
+
+const referenceFrame = document.getElementById('referenceFrame');
+
+function updateFrameTransform() {
+  const scale = Math.max(window.innerWidth / REF_W, window.innerHeight / REF_H);
+  referenceFrame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+updateFrameTransform();
+window.addEventListener('resize', updateFrameTransform);
+document.addEventListener('fullscreenchange', updateFrameTransform);
+
+function screenToFrameCoords(clientX, clientY) {
+  const rect = referenceFrame.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) / rect.width * REF_W,
+    y: (clientY - rect.top) / rect.height * REF_H
+  };
 }
 
-const home = document.getElementById('home');
 const viewer = document.getElementById('viewer');
 const gridView = document.getElementById('gridView');
 const mainImage = document.getElementById('mainImage');
@@ -39,7 +55,7 @@ function openSerie(serieName) {
       currentIndex = 0;
       inGridView = false;
       hasSeenGrid = false;
-      home.style.display = 'none';
+      document.body.classList.add('viewing-serie');
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
       showImage(0);
@@ -53,7 +69,7 @@ function closeEverything() {
   }
   viewer.style.display = 'none';
   gridView.style.display = 'none';
-  home.style.display = 'flex';
+  document.body.classList.remove('viewing-serie');
 }
 
 function ensureFullscreen() {
@@ -265,71 +281,30 @@ document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('touchstart', resetInactivityTimer);
 resetInactivityTimer();
 
-// --- Effet de rayures lumineuses (lecture seule sur mobile) ---
+// --- Effet de rayures lumineuses, résolution fixe 1920×1140 partout ---
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
 const deltaCanvas = document.createElement('canvas');
+deltaCanvas.width = REF_W;
+deltaCanvas.height = REF_H;
 const deltaCtx = deltaCanvas.getContext('2d');
-
-function drawImageCover(ctx, img, canvasW, canvasH) {
-  const imgRatio = img.width / img.height;
-  const canvasRatio = canvasW / canvasH;
-
-  let sx, sy, sWidth, sHeight;
-
-  if (imgRatio > canvasRatio) {
-    sHeight = img.height;
-    sWidth = sHeight * canvasRatio;
-    sx = (img.width - sWidth) / 2;
-    sy = 0;
-  } else {
-    sWidth = img.width;
-    sHeight = sWidth / canvasRatio;
-    sx = 0;
-    sy = (img.height - sHeight) / 2;
-  }
-
-  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvasW, canvasH);
-}
-
-function resizeScratchCanvas() {
-  let previousImage = null;
-  if (scratchCanvas.width > 0 && scratchCanvas.height > 0) {
-    try {
-      previousImage = scratchCanvas.toDataURL('image/png');
-    } catch (e) {}
-  }
-  scratchCanvas.width = window.innerWidth;
-  scratchCanvas.height = window.innerHeight;
-  deltaCanvas.width = window.innerWidth;
-  deltaCanvas.height = window.innerHeight;
-  if (previousImage) {
-    const img = new Image();
-    img.onload = () => {
-      drawImageCover(scratchCtx, img, scratchCanvas.width, scratchCanvas.height);
-    };
-    img.src = previousImage;
-  }
-}
-resizeScratchCanvas();
-window.addEventListener('resize', resizeScratchCanvas);
 
 fetch('/scratch')
   .then(res => res.json())
   .then(({ main, delta }) => {
     if (main) {
       const img = new Image();
-      img.onload = () => drawImageCover(scratchCtx, img, scratchCanvas.width, scratchCanvas.height);
+      img.onload = () => scratchCtx.drawImage(img, 0, 0);
       img.src = main;
     }
     if (delta) {
       const img = new Image();
       img.onload = () => {
         scratchCtx.globalCompositeOperation = 'lighter';
-        drawImageCover(scratchCtx, img, scratchCanvas.width, scratchCanvas.height);
+        scratchCtx.drawImage(img, 0, 0);
         deltaCtx.globalCompositeOperation = 'lighter';
-        drawImageCover(deltaCtx, img, deltaCanvas.width, deltaCanvas.height);
+        deltaCtx.drawImage(img, 0, 0);
         hasUnsavedScratchChanges = true;
         hasUnsavedDelta = true;
       };
@@ -357,8 +332,10 @@ let scratchGroupOpacity = 0;
 const scratchPageLoadTime = performance.now();
 let scratchIntroBoostDone = false;
 
-let scratchLastX = null;
-let scratchLastY = null;
+let scratchLastScreenX = null;
+let scratchLastScreenY = null;
+let scratchLastFrameX = null;
+let scratchLastFrameY = null;
 let hasUnsavedScratchChanges = false;
 let hasUnsavedDelta = false;
 
@@ -390,12 +367,12 @@ function bakeAllPending() {
   }
 }
 
-function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
+function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity) {
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
-  const minX = Math.min(x1, x2) - pad;
-  const minY = Math.min(y1, y2) - pad;
-  const w = Math.abs(x2 - x1) + pad * 2;
-  const h = Math.abs(y2 - y1) + pad * 2;
+  const minX = Math.min(screenX1, screenX2) - pad;
+  const minY = Math.min(screenY1, screenY2) - pad;
+  const w = Math.abs(screenX2 - screenX1) + pad * 2;
+  const h = Math.abs(screenY2 - screenY1) + pad * 2;
 
   const mini = document.createElement('canvas');
   mini.width = w;
@@ -416,15 +393,15 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   mctx.lineWidth = SCRATCH_LINE_WIDTH;
   mctx.lineCap = 'round';
   mctx.beginPath();
-  mctx.moveTo(x1 - minX, y1 - minY);
-  mctx.lineTo(x2 - minX, y2 - minY);
+  mctx.moveTo(screenX1 - minX, screenY1 - minY);
+  mctx.lineTo(screenX2 - minX, screenY2 - minY);
   mctx.stroke();
 
   requestAnimationFrame(() => {
     mini.style.opacity = '1';
   });
 
-  const strokeRecord = { x1, y1, x2, y2, targetOpacity, baked: false, miniEl: mini };
+  const strokeRecord = { x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini };
 
   strokeRecord.timeoutId = setTimeout(() => {
     bakeStroke(strokeRecord);
@@ -437,8 +414,10 @@ function spawnFadingStroke(x1, y1, x2, y2, targetOpacity) {
   pendingStrokes.push(strokeRecord);
 }
 
-function processScratchPoint(x, y) {
-  if (scratchLastX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
+function processScratchPoint(screenX, screenY) {
+  const frame = screenToFrameCoords(screenX, screenY);
+
+  if (scratchLastScreenX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
     let targetOpacity;
 
     if (scratchGroupRemaining > 0) {
@@ -462,11 +441,17 @@ function processScratchPoint(x, y) {
       targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
     }
 
-    spawnFadingStroke(scratchLastX, scratchLastY, x, y, targetOpacity);
+    spawnFadingStroke(
+      scratchLastScreenX, scratchLastScreenY, screenX, screenY,
+      scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
+      targetOpacity
+    );
   }
 
-  scratchLastX = x;
-  scratchLastY = y;
+  scratchLastScreenX = screenX;
+  scratchLastScreenY = screenY;
+  scratchLastFrameX = frame.x;
+  scratchLastFrameY = frame.y;
 }
 
 if (!isMobileDevice()) {
