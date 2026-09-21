@@ -66,7 +66,14 @@ body::before {
 }
 .serie-link:hover {
   opacity: 0.5;
-  
+}
+
+@media (max-width: 600px) {
+  .home {
+    padding-top: 15vh;
+  }
+}
+
 .footer-links {
   position: absolute;
   bottom: 40px;
@@ -94,10 +101,10 @@ body::before {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* plus grand qu'avant */
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
 }
-  
+
 .viewer {
   height: 100vh;
   width: 100vw;
@@ -187,77 +194,4 @@ body::before {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-}
-
-.grid-cell {
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.grid-cell img {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  transition: opacity 0.2s ease;
-}
-
-.grid-cell:hover img {
-  opacity: 0.7;
-}
-
-.contact-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.contact-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  max-width: 400px;
-  padding: 0 24px;
-}
-.contact-form label {
-  font-size: 14px;
-}
-.contact-form input,
-.contact-form textarea {
-  font-family: 'Consolas', monospace;
-  font-size: 16px;
-  padding: 8px;
-  border: 1px solid #1a1a1a;
-  background: none;
-  color: #1a1a1a;
-}
-.contact-form button {
-  font-family: 'Consolas', monospace;
-  font-size: 16px;
-  padding: 10px;
-  background: none;
-  border: 1px solid #1a1a1a;
-  color: #1a1a1a;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-.contact-form button:hover {
-  opacity: 0.6;
-}
-.merci-text {
-  font-size: 18px;
-}
-
-.apropos-text {
-  max-width: 500px;
-  padding: 0 24px;
-  font-size: 16px;
-  line-height: 1.6;
 }
