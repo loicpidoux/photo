@@ -268,3 +268,10 @@ body::before {
   font-size: 16px;
   line-height: 1.6;
 }
+
+.touch-device .serie-link:hover,
+.touch-device .footer-links a:hover,
+.touch-device .contact-form button:hover,
+.touch-device .grid-cell:hover img {
+  opacity: 1;
+}
