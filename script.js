@@ -265,12 +265,33 @@ document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('touchstart', resetInactivityTimer);
 resetInactivityTimer();
 
-// --- Effet de rayures lumineuses ---
+// --- Effet de rayures lumineuses (lecture seule sur mobile) ---
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
 const deltaCanvas = document.createElement('canvas');
 const deltaCtx = deltaCanvas.getContext('2d');
+
+function drawImageCover(ctx, img, canvasW, canvasH) {
+  const imgRatio = img.width / img.height;
+  const canvasRatio = canvasW / canvasH;
+
+  let sx, sy, sWidth, sHeight;
+
+  if (imgRatio > canvasRatio) {
+    sHeight = img.height;
+    sWidth = sHeight * canvasRatio;
+    sx = (img.width - sWidth) / 2;
+    sy = 0;
+  } else {
+    sWidth = img.width;
+    sHeight = sWidth / canvasRatio;
+    sx = 0;
+    sy = (img.height - sHeight) / 2;
+  }
+
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvasW, canvasH);
+}
 
 function resizeScratchCanvas() {
   let previousImage = null;
@@ -286,7 +307,7 @@ function resizeScratchCanvas() {
   if (previousImage) {
     const img = new Image();
     img.onload = () => {
-      scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+      drawImageCover(scratchCtx, img, scratchCanvas.width, scratchCanvas.height);
     };
     img.src = previousImage;
   }
@@ -299,16 +320,16 @@ fetch('/scratch')
   .then(({ main, delta }) => {
     if (main) {
       const img = new Image();
-      img.onload = () => scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+      img.onload = () => drawImageCover(scratchCtx, img, scratchCanvas.width, scratchCanvas.height);
       img.src = main;
     }
     if (delta) {
       const img = new Image();
       img.onload = () => {
         scratchCtx.globalCompositeOperation = 'lighter';
-        scratchCtx.drawImage(img, 0, 0, scratchCanvas.width, scratchCanvas.height);
+        drawImageCover(scratchCtx, img, scratchCanvas.width, scratchCanvas.height);
         deltaCtx.globalCompositeOperation = 'lighter';
-        deltaCtx.drawImage(img, 0, 0, deltaCanvas.width, deltaCanvas.height);
+        drawImageCover(deltaCtx, img, deltaCanvas.width, deltaCanvas.height);
         hasUnsavedScratchChanges = true;
         hasUnsavedDelta = true;
       };
@@ -325,7 +346,7 @@ const SCRATCH_FADE_MS = 60;
 const SCRATCH_INTRO_MIN_MS = 4000;
 const SCRATCH_INTRO_MAX_MS = 10000;
 const SCRATCH_BOOST_OPACITY_MIN = 0.2;
-const SCRATCH_BOOST_OPACITY_MAX = 0.26;
+const SCRATCH_BOOST_OPACITY_MAX = 0.28;
 const SCRATCH_RANDOM_BOOST_CHANCE = 0.005;
 
 const SCRATCH_STROKE_GROUP_SIZE_MIN = 3;
@@ -448,24 +469,14 @@ function processScratchPoint(x, y) {
   scratchLastY = y;
 }
 
-document.addEventListener('mousemove', (e) => {
-  processScratchPoint(e.clientX, e.clientY);
-});
-
-document.addEventListener('touchmove', (e) => {
-  if (e.touches.length > 0) {
-    processScratchPoint(e.touches[0].clientX, e.touches[0].clientY);
-  }
-}, { passive: true });
-
-document.addEventListener('touchstart', (e) => {
-  if (e.touches.length > 0) {
-    scratchLastX = e.touches[0].clientX;
-    scratchLastY = e.touches[0].clientY;
-  }
-}, { passive: true });
+if (!isMobileDevice()) {
+  document.addEventListener('mousemove', (e) => {
+    processScratchPoint(e.clientX, e.clientY);
+  });
+}
 
 function saveMainState() {
+  if (isMobileDevice()) return;
   if (!hasUnsavedScratchChanges) return;
   try {
     const dataUrl = scratchCanvas.toDataURL('image/png');
@@ -483,6 +494,7 @@ function saveMainState() {
 setInterval(saveMainState, 10000);
 
 function saveDeltaState() {
+  if (isMobileDevice()) return;
   if (!hasUnsavedDelta) return;
   try {
     const dataUrl = deltaCanvas.toDataURL('image/png');
