@@ -73,7 +73,7 @@ body::before {
 
 .footer-links-desktop {
   position: absolute;
-  bottom: 40px;
+  bottom: 200px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
