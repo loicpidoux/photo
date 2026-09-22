@@ -59,7 +59,6 @@ body::before {
   flex-direction: column;
   gap: 8px;
   font-size: 20px;
-  z-index: 1;
 }
 
 .serie-link {
@@ -80,7 +79,6 @@ body::before {
   display: flex;
   gap: 90px;
   font-size: 14px;
-  z-index: 1;
 }
 .footer-links-desktop a {
   color: #1a1a1a;
