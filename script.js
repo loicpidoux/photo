@@ -9,18 +9,19 @@ const referenceFrame = document.getElementById('referenceFrame');
 
 let chromeHeightOffset = 0;
 
-function measureChromeHeight() {
-  if (!document.fullscreenElement) {
-    chromeHeightOffset = window.outerHeight - window.innerHeight;
-  }
-}
-measureChromeHeight();
-window.addEventListener('resize', measureChromeHeight);
-
 function updateFrameTransform() {
   const scale = Math.max(screen.width / REF_W, screen.height / REF_H);
-  const extraOffset = document.fullscreenElement ? 0 : chromeHeightOffset / 2;
-  referenceFrame.style.transform = `translate(-50%, calc(-50% + ${extraOffset}px)) scale(${scale})`;
+
+  const chromeHeight = window.outerHeight - window.innerHeight;
+  const chromeWidth = window.outerWidth - window.innerWidth;
+
+  const viewportCenterAbsX = (window.screenX || 0) + chromeWidth / 2 + window.innerWidth / 2;
+  const viewportCenterAbsY = (window.screenY || 0) + chromeHeight + window.innerHeight / 2;
+
+  const offsetX = (screen.width / 2) - viewportCenterAbsX;
+  const offsetY = (screen.height / 2) - viewportCenterAbsY;
+
+  referenceFrame.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${scale})`;
 }
 updateFrameTransform();
 window.addEventListener('resize', updateFrameTransform);
