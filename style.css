@@ -132,7 +132,7 @@ body.viewing-serie .footer-links-mobile {
 }
 .image-container {
   position: relative;
-  z-index: 3;
+  z-index: 10;
   width: 100%;
   height: 100%;
   padding: 8vh 10vw;
