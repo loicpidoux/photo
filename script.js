@@ -7,8 +7,6 @@ const REF_H = 1140;
 
 const referenceFrame = document.getElementById('referenceFrame');
 
-let chromeHeightOffset = 0;
-
 function updateFrameTransform() {
   const scale = Math.max(screen.width / REF_W, screen.height / REF_H);
 
@@ -25,7 +23,6 @@ function updateFrameTransform() {
 }
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
-});
 
 function screenToFrameCoords(clientX, clientY) {
   const rect = referenceFrame.getBoundingClientRect();
