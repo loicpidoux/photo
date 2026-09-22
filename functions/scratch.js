@@ -4,7 +4,7 @@ export async function onRequestGet({ env }) {
   return new Response(JSON.stringify({ main: main || null, delta: delta || null }), {
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'private, max-age=10'
     }
   });
 }
