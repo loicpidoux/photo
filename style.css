@@ -78,7 +78,7 @@ body::before {
   transform: translateX(-50%);
   display: flex;
   gap: 90px;
-  font-size: 14px;
+  font-size: 16px;
 }
 .footer-links-desktop a {
   color: #1a1a1a;
