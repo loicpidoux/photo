@@ -7,9 +7,20 @@ const REF_H = 1140;
 
 const referenceFrame = document.getElementById('referenceFrame');
 
+let chromeHeightOffset = 0;
+
+function measureChromeHeight() {
+  if (!document.fullscreenElement) {
+    chromeHeightOffset = window.outerHeight - window.innerHeight;
+  }
+}
+measureChromeHeight();
+window.addEventListener('resize', measureChromeHeight);
+
 function updateFrameTransform() {
   const scale = Math.max(screen.width / REF_W, screen.height / REF_H);
-  referenceFrame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  const extraOffset = document.fullscreenElement ? 0 : chromeHeightOffset / 2;
+  referenceFrame.style.transform = `translate(-50%, calc(-50% + ${extraOffset}px)) scale(${scale})`;
 }
 updateFrameTransform();
 window.addEventListener('resize', updateFrameTransform);
