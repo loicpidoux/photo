@@ -13,7 +13,9 @@ function updateFrameTransform() {
 }
 updateFrameTransform();
 window.addEventListener('resize', updateFrameTransform);
-document.addEventListener('fullscreenchange', updateFrameTransform);
+document.addEventListener('fullscreenchange', () => {
+  setTimeout(updateFrameTransform, 50);
+});
 
 function screenToFrameCoords(clientX, clientY) {
   const rect = referenceFrame.getBoundingClientRect();
