@@ -2,6 +2,27 @@ function isMobileDevice() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
 
+const FRAME_REF_W = 1920;
+const FRAME_REF_H = 1140;
+const referenceFrame = document.getElementById('referenceFrame');
+
+function updateFrameTransform() {
+  const scale = Math.max(screen.width / FRAME_REF_W, screen.height / FRAME_REF_H);
+
+  let offsetY = 0;
+  if (!document.fullscreenElement) {
+    const chromeHeight = window.outerHeight - window.innerHeight;
+    const viewportTopOnScreen = (window.screenY || 0) + chromeHeight;
+    const viewportCenterOnScreen = viewportTopOnScreen + window.innerHeight / 2;
+    const trueScreenCenter = screen.height / 2;
+    offsetY = trueScreenCenter - viewportCenterOnScreen;
+  }
+
+  referenceFrame.style.transform = `translate(-50%, calc(-50% + ${offsetY}px)) scale(${scale})`;
+}
+window.addEventListener('resize', updateFrameTransform);
+updateFrameTransform();
+
 document.querySelectorAll('.serie-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
