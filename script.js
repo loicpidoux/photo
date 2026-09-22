@@ -12,11 +12,7 @@ function updateFrameTransform() {
 
   let offsetY = 0;
   if (!document.fullscreenElement) {
-    const chromeHeight = window.outerHeight - window.innerHeight;
-    const viewportTopOnScreen = (window.screenY || 0) + chromeHeight;
-    const viewportCenterOnScreen = viewportTopOnScreen + window.innerHeight / 2;
-    const trueScreenCenter = screen.height / 2;
-    offsetY = trueScreenCenter - viewportCenterOnScreen;
+    offsetY = (screen.height - screen.availHeight) / 2;
   }
 
   referenceFrame.style.transform = `translate(-50%, calc(-50% + ${offsetY}px)) scale(${scale})`;
