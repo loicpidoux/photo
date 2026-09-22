@@ -8,7 +8,7 @@ const REF_H = 1140;
 const referenceFrame = document.getElementById('referenceFrame');
 
 function updateFrameTransform() {
-  const scale = Math.max(window.innerWidth / REF_W, window.innerHeight / REF_H);
+  const scale = Math.max(screen.width / REF_W, screen.height / REF_H);
   referenceFrame.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
 updateFrameTransform();
