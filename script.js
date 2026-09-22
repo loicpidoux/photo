@@ -12,13 +12,29 @@ function updateFrameTransform() {
 
   let offsetY = 0;
   if (!document.fullscreenElement) {
-    offsetY = (screen.height - screen.availHeight) / 2;
+    const chromeHeight = window.outerHeight - window.innerHeight;
+    const viewportTopOnScreen = (window.screenY || 0) + chromeHeight;
+    const viewportCenterOnScreen = viewportTopOnScreen + window.innerHeight / 2;
+    const trueScreenCenter = screen.height / 2;
+    offsetY = trueScreenCenter - viewportCenterOnScreen;
   }
 
   referenceFrame.style.transform = `translate(-50%, calc(-50% + ${offsetY}px)) scale(${scale})`;
 }
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
+
+function fadeOutFrame(callback) {
+  referenceFrame.style.transition = 'opacity 0.15s ease';
+  referenceFrame.style.opacity = '0';
+  setTimeout(() => {
+    callback();
+    setTimeout(() => {
+      updateFrameTransform();
+      referenceFrame.style.opacity = '1';
+    }, 50);
+  }, 150);
+}
 
 function screenToFrameCoords(clientX, clientY) {
   const rect = referenceFrame.getBoundingClientRect();
@@ -45,10 +61,15 @@ document.querySelectorAll('.serie-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
     const serieName = link.dataset.serie;
+
     if (!isMobileDevice() && document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      fadeOutFrame(() => {
+        document.documentElement.requestFullscreen().catch(() => {});
+        openSerie(serieName);
+      });
+    } else {
+      openSerie(serieName);
     }
-    openSerie(serieName);
   });
 });
 
@@ -235,7 +256,6 @@ document.addEventListener('click', () => {
   ensureFullscreen();
 });
 
-// --- Navigation par balayage (swipe) sur mobile ---
 let swipeStartX = null;
 let swipeStartY = null;
 const SWIPE_MIN_DISTANCE = 50;
