@@ -47,6 +47,7 @@ body::before {
   width: 1920px;
   height: 1140px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .series-list {
