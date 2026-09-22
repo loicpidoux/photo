@@ -8,8 +8,6 @@ const REF_H = 1140;
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
-let scratchOffsetY = 0;
-
 function updateScratchTransform() {
   const scale = Math.max(screen.width / REF_W, screen.height / REF_H);
 
@@ -78,28 +76,27 @@ fetch('/scratch')
 const SCRATCH_SKIP_CHANCE = 0.4;
 const SCRATCH_MAX_OPACITY = 0.04;
 const SCRATCH_LINE_WIDTH = 1;
-const SCRATCH_FADE_MS = 30;
+const SCRATCH_FADE_MS = 60;
 
-const SCRATCH_INTRO_MIN_MS = 4000;
-const SCRATCH_INTRO_MAX_MS = 10000;
+const SCRATCH_INTRO_INACTIVITY_MS = 2000;
+const SCRATCH_RANDOM_BOOST_INACTIVITY_MS = 4000;
 const SCRATCH_BOOST_OPACITY_MIN = 0.2;
 const SCRATCH_BOOST_OPACITY_MAX = 0.28;
 const SCRATCH_RANDOM_BOOST_CHANCE = 0.005;
 const SCRATCH_BOOST_FADE_MS = 0;
-
 
 const SCRATCH_STROKE_GROUP_SIZE_MIN = 3;
 const SCRATCH_STROKE_GROUP_SIZE_MAX = 8;
 let scratchGroupRemaining = 0;
 let scratchGroupOpacity = 0;
 
-const scratchPageLoadTime = performance.now();
 let scratchIntroBoostDone = false;
 
 let scratchLastScreenX = null;
 let scratchLastScreenY = null;
 let scratchLastFrameX = null;
 let scratchLastFrameY = null;
+let scratchLastMoveTime = null;
 let hasUnsavedScratchChanges = false;
 let hasUnsavedDelta = false;
 
@@ -131,7 +128,7 @@ function bakeAllPending() {
   }
 }
 
-function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity) {
+function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs) {
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
   const minX = Math.min(screenX1, screenX2) - pad;
   const minY = Math.min(screenY1, screenY2) - pad;
@@ -148,8 +145,8 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
   mini.style.height = h + 'px';
   mini.style.pointerEvents = 'none';
   mini.style.zIndex = 2;
-  mini.style.opacity = '0';
-  mini.style.transition = `opacity ${SCRATCH_FADE_MS}ms linear`;
+  mini.style.opacity = fadeMs > 0 ? '0' : '1';
+  mini.style.transition = fadeMs > 0 ? `opacity ${fadeMs}ms linear` : 'none';
   document.body.appendChild(mini);
 
   const mctx = mini.getContext('2d');
@@ -161,9 +158,11 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
   mctx.lineTo(screenX2 - minX, screenY2 - minY);
   mctx.stroke();
 
-  requestAnimationFrame(() => {
-    mini.style.opacity = '1';
-  });
+  if (fadeMs > 0) {
+    requestAnimationFrame(() => {
+      mini.style.opacity = '1';
+    });
+  }
 
   const strokeRecord = { x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini };
 
@@ -173,49 +172,60 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
     mini.remove();
     const idx = pendingStrokes.indexOf(strokeRecord);
     if (idx !== -1) pendingStrokes.splice(idx, 1);
-  }, SCRATCH_FADE_MS + 30);
+  }, fadeMs + 30);
 
   pendingStrokes.push(strokeRecord);
 }
 
 function processScratchPoint(screenX, screenY) {
   const frame = screenToFrameCoords(screenX, screenY);
+  const now = performance.now();
+  const inactivityGap = scratchLastMoveTime !== null ? now - scratchLastMoveTime : null;
 
-  if (scratchLastScreenX !== null && Math.random() >= SCRATCH_SKIP_CHANCE) {
-    let targetOpacity;
+  if (scratchLastScreenX !== null) {
+    let shouldDraw = Math.random() >= SCRATCH_SKIP_CHANCE;
+    let targetOpacity = null;
+    let fadeMs = SCRATCH_FADE_MS;
 
-    if (scratchGroupRemaining > 0) {
-      targetOpacity = scratchGroupOpacity;
-      scratchGroupRemaining--;
-    } else {
-      targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
-      scratchGroupOpacity = targetOpacity;
-      scratchGroupRemaining = Math.floor(
-        SCRATCH_STROKE_GROUP_SIZE_MIN + Math.random() * (SCRATCH_STROKE_GROUP_SIZE_MAX - SCRATCH_STROKE_GROUP_SIZE_MIN)
+    const eligibleForIntro = inactivityGap !== null && inactivityGap >= SCRATCH_INTRO_INACTIVITY_MS && !scratchIntroBoostDone;
+    const eligibleForRandomBoost = inactivityGap !== null && inactivityGap >= SCRATCH_RANDOM_BOOST_INACTIVITY_MS;
+
+    if (eligibleForIntro) {
+      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
+      fadeMs = SCRATCH_BOOST_FADE_MS;
+      scratchIntroBoostDone = true;
+      shouldDraw = true;
+    } else if (eligibleForRandomBoost && Math.random() < SCRATCH_RANDOM_BOOST_CHANCE) {
+      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
+      fadeMs = SCRATCH_BOOST_FADE_MS;
+      shouldDraw = true;
+    } else if (shouldDraw) {
+      if (scratchGroupRemaining > 0) {
+        targetOpacity = scratchGroupOpacity;
+        scratchGroupRemaining--;
+      } else {
+        targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
+        scratchGroupOpacity = targetOpacity;
+        scratchGroupRemaining = Math.floor(
+          SCRATCH_STROKE_GROUP_SIZE_MIN + Math.random() * (SCRATCH_STROKE_GROUP_SIZE_MAX - SCRATCH_STROKE_GROUP_SIZE_MIN)
+        );
+      }
+    }
+
+    if (shouldDraw && targetOpacity !== null) {
+      spawnFadingStroke(
+        scratchLastScreenX, scratchLastScreenY, screenX, screenY,
+        scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
+        targetOpacity, fadeMs
       );
     }
-
-    const elapsedSincePageLoad = performance.now() - scratchPageLoadTime;
-    const isInIntroWindow = elapsedSincePageLoad >= SCRATCH_INTRO_MIN_MS && elapsedSincePageLoad <= SCRATCH_INTRO_MAX_MS;
-
-    if (isInIntroWindow && !scratchIntroBoostDone) {
-      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
-      scratchIntroBoostDone = true;
-    } else if (Math.random() < SCRATCH_RANDOM_BOOST_CHANCE) {
-      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
-    }
-
-    spawnFadingStroke(
-      scratchLastScreenX, scratchLastScreenY, screenX, screenY,
-      scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-      targetOpacity
-    );
   }
 
   scratchLastScreenX = screenX;
   scratchLastScreenY = screenY;
   scratchLastFrameX = frame.x;
   scratchLastFrameY = frame.y;
+  scratchLastMoveTime = now;
 }
 
 if (!isMobileDeviceScratch()) {
