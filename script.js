@@ -143,7 +143,7 @@ function layoutGrid() {
   const gap = 8;
 
   if (isMobileDevice()) {
-    const margin = 16;
+    const margin = 10;
     const containerW = window.innerWidth - margin * 2;
     const containerH = window.innerHeight - margin * 2;
 
