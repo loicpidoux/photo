@@ -31,16 +31,22 @@ updateFrameTransform();
 history.pushState(null, '', location.href);
 
 window.addEventListener('popstate', () => {
-  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
-  if (!isViewingSerie) return;
+  const isGridVisible = gridView.style.display !== 'none';
+  const isViewerVisible = viewer.style.display !== 'none';
 
-  if (inGridView) {
+  if (isGridVisible) {
     closeEverything();
-  } else if (hasSeenGrid) {
-    showGrid();
     history.pushState(null, '', location.href);
-  } else {
-    closeEverything();
+    return;
+  }
+
+  if (isViewerVisible) {
+    if (hasSeenGrid) {
+      showGrid();
+    } else {
+      closeEverything();
+    }
+    history.pushState(null, '', location.href);
   }
 });
 
@@ -84,6 +90,11 @@ function openSerie(serieName) {
       inGridView = false;
       hasSeenGrid = false;
       document.body.classList.add('viewing-serie');
+
+      for (let i = 0; i < 20; i++) {
+        history.pushState(null, '', location.href);
+      }
+
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
       showImage(0);
