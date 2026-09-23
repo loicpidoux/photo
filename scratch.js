@@ -8,8 +8,13 @@ const REF_H = 1140;
 const scratchCanvas = document.getElementById('scratchCanvas');
 const scratchCtx = scratchCanvas.getContext('2d');
 
+const MOBILE_ZOOM_FACTOR = 1.3;
+
 function updateScratchTransform() {
-  const scale = Math.max(screen.width / REF_W, screen.height / REF_H);
+  let scale = Math.max(screen.width / REF_W, screen.height / REF_H);
+  if (isMobileDeviceScratch()) {
+    scale *= MOBILE_ZOOM_FACTOR;
+  }
 
   let offsetY = 0;
   if (!document.fullscreenElement) {
