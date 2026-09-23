@@ -11,8 +11,8 @@ const FRAME_MOBILE_ZOOM_FACTOR = 1.3;
 function updateFrameTransform() {
   let scale = Math.max(screen.width / FRAME_REF_W, screen.height / FRAME_REF_H);
   if (isMobileDevice()) {
-  scale *= FRAME_MOBILE_ZOOM_FACTOR;
-}
+    scale *= FRAME_MOBILE_ZOOM_FACTOR;
+  }
 
   let offsetY = 0;
   if (!document.fullscreenElement) {
@@ -90,12 +90,29 @@ function ensureFullscreen() {
   }
 }
 
-function showImage(index) {
+function showImage(index, direction) {
   inGridView = false;
   gridView.style.display = 'none';
   viewer.style.display = 'flex';
-  currentIndex = index;
-  mainImage.src = images[index];
+
+  if (direction && isMobileDevice()) {
+    const offscreenX = direction === 'next' ? '-100%' : '100%';
+    mainImage.style.transition = 'none';
+    mainImage.style.transform = `translateX(${offscreenX})`;
+
+    requestAnimationFrame(() => {
+      currentIndex = index;
+      mainImage.src = images[index];
+      mainImage.style.transition = 'transform 0.25s ease';
+      requestAnimationFrame(() => {
+        mainImage.style.transform = 'translateX(0)';
+      });
+    });
+  } else {
+    currentIndex = index;
+    mainImage.src = images[index];
+  }
+
   updateArrows();
   galleryBtn.style.display = hasSeenGrid ? 'block' : 'none';
   if (index === 0) {
@@ -126,9 +143,11 @@ function layoutGrid() {
   const gap = 8;
 
   if (isMobileDevice()) {
-    const containerW = window.innerWidth - 32;
-    const cols = containerW < 500 ? 2 : 3;
-    const cellSize = (containerW - gap * (cols - 1)) / cols;
+    const margin = 40;
+    const containerW = window.innerWidth - margin * 2;
+    const containerH = window.innerHeight - margin * 2;
+
+    const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
 
     gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
 
@@ -194,7 +213,7 @@ function preloadRemaining(fromIndex) {
 function goNext() {
   ensureFullscreen();
   if (currentIndex < images.length - 1) {
-    showImage(currentIndex + 1);
+    showImage(currentIndex + 1, 'next');
   } else {
     showGrid();
   }
@@ -203,9 +222,9 @@ function goNext() {
 function goPrev() {
   ensureFullscreen();
   if (inGridView) {
-    showImage(images.length - 1);
+    showImage(images.length - 1, 'prev');
   } else if (currentIndex > 0) {
-    showImage(currentIndex - 1);
+    showImage(currentIndex - 1, 'prev');
   }
 }
 
