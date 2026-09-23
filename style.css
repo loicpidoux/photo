@@ -197,9 +197,10 @@ body.viewing-serie .footer-links-desktop {
 }
 @media (max-width: 600px) {
   .grid-view {
-    align-items: flex-start;
-    padding-top: 60px;
-    padding-bottom: 40px;
+    overflow: hidden;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 }
 
