@@ -32,10 +32,17 @@ history.pushState(null, '', location.href);
 
 window.addEventListener('popstate', () => {
   const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
-  if (isViewingSerie) {
+  if (!isViewingSerie) return;
+
+  if (inGridView) {
     closeEverything();
-    history.pushState(null, '', location.href);
+  } else if (hasSeenGrid) {
+    showGrid();
+  } else {
+    closeEverything();
   }
+
+  history.pushState(null, '', location.href);
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
