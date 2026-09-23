@@ -202,10 +202,11 @@ function showGrid() {
     const img = document.createElement('img');
     img.src = src;
     cell.appendChild(img);
-    cell.addEventListener('click', () => {
-      ensureFullscreen();
-      showImage(i);
-    });
+    cell.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ensureFullscreen();
+  showImage(i);
+});
     gridInner.appendChild(cell);
   });
   gridView.style.display = 'flex';
