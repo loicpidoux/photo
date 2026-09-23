@@ -297,3 +297,11 @@ body.viewing-serie .footer-links-desktop {
   object-fit: contain;
   user-select: none;
 }
+@media (max-width: 600px) {
+  .close-btn {
+    display: none;
+  }
+  .gallery-btn {
+    display: none;
+  }
+}
