@@ -301,7 +301,10 @@ body.viewing-serie .footer-links-desktop {
   .close-btn {
     display: none;
   }
+}
+
+@media (max-width: 600px) {
   .gallery-btn {
-    display: none;
+    display: none !important;
   }
 }
