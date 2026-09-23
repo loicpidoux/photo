@@ -38,11 +38,10 @@ window.addEventListener('popstate', () => {
     closeEverything();
   } else if (hasSeenGrid) {
     showGrid();
+    history.pushState(null, '', location.href);
   } else {
     closeEverything();
   }
-
-  history.pushState(null, '', location.href);
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
@@ -85,7 +84,6 @@ function openSerie(serieName) {
       inGridView = false;
       hasSeenGrid = false;
       document.body.classList.add('viewing-serie');
-      history.pushState({ viewingSerie: true }, '', location.href);
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
       showImage(0);
