@@ -36,10 +36,11 @@ window.addEventListener('popstate', () => {
     closeEverything();
   } else if (hasSeenGrid) {
     showGrid();
-    history.pushState(null, '', location.href);
   } else {
     closeEverything();
   }
+
+  history.pushState(null, '', location.href);
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
