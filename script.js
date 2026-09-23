@@ -28,7 +28,9 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
-history.pushState(null, '', location.href);
+for (let i = 0; i < 5; i++) {
+  history.pushState(null, '', location.href);
+}
 
 window.addEventListener('popstate', () => {
   const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
