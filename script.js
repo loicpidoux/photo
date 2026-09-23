@@ -6,6 +6,8 @@ const FRAME_REF_W = 1920;
 const FRAME_REF_H = 1140;
 const referenceFrame = document.getElementById('referenceFrame');
 
+const MOBILE_ZOOM_FACTOR = 1.3;
+
 function updateFrameTransform() {
   let scale = Math.max(screen.width / FRAME_REF_W, screen.height / FRAME_REF_H);
   if (isMobileDevice()) {
