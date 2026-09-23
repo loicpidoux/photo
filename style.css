@@ -128,6 +128,11 @@ body.viewing-serie .footer-links-desktop {
   object-fit: contain;
   user-select: none;
 }
+@media (max-width: 600px) {
+  .image-container {
+    padding: 2vh 3vw;
+  }
+}
 .close-btn {
   position: fixed;
   top: 32px;
@@ -158,6 +163,11 @@ body.viewing-serie .footer-links-desktop {
 .controls-hidden .gallery-btn {
   opacity: 0;
   pointer-events: none;
+}
+@media (max-width: 600px) {
+  .nav-arrow {
+    display: none;
+  }
 }
 .gallery-btn {
   position: fixed;
