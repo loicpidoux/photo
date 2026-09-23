@@ -28,6 +28,16 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
+history.pushState(null, '', location.href);
+
+window.addEventListener('popstate', () => {
+  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (isViewingSerie) {
+    closeEverything();
+    history.pushState(null, '', location.href);
+  }
+});
+
 document.querySelectorAll('.serie-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
@@ -68,6 +78,7 @@ function openSerie(serieName) {
       inGridView = false;
       hasSeenGrid = false;
       document.body.classList.add('viewing-serie');
+      history.pushState({ viewingSerie: true }, '', location.href);
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
       showImage(0);
@@ -203,10 +214,10 @@ function showGrid() {
     img.src = src;
     cell.appendChild(img);
     cell.addEventListener('click', (e) => {
-  e.stopPropagation();
-  ensureFullscreen();
-  showImage(i);
-});
+      e.stopPropagation();
+      ensureFullscreen();
+      showImage(i);
+    });
     gridInner.appendChild(cell);
   });
   gridView.style.display = 'flex';
