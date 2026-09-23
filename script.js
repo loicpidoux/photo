@@ -28,25 +28,17 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
-history.pushState(null, '', location.href);
-
 window.addEventListener('popstate', () => {
-  const isGridVisible = gridView.style.display !== 'none';
-  const isViewerVisible = viewer.style.display !== 'none';
+  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isViewingSerie) return;
 
-  if (isGridVisible) {
+  if (inGridView) {
     closeEverything();
+  } else if (hasSeenGrid) {
+    showGrid();
     history.pushState(null, '', location.href);
-    return;
-  }
-
-  if (isViewerVisible) {
-    if (hasSeenGrid) {
-      showGrid();
-    } else {
-      closeEverything();
-    }
-    history.pushState(null, '', location.href);
+  } else {
+    closeEverything();
   }
 });
 
@@ -91,7 +83,7 @@ function openSerie(serieName) {
       hasSeenGrid = false;
       document.body.classList.add('viewing-serie');
 
-      for (let i = 0; i < 20; i++) {
+      if (isMobileDevice()) {
         history.pushState(null, '', location.href);
       }
 
