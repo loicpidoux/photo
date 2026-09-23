@@ -47,6 +47,7 @@ document.querySelectorAll('.serie-link').forEach(link => {
 const viewer = document.getElementById('viewer');
 const gridView = document.getElementById('gridView');
 const mainImage = document.getElementById('mainImage');
+const mainImageIncoming = document.getElementById('mainImageIncoming');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const closeBtn = document.getElementById('closeBtn');
@@ -56,6 +57,7 @@ let images = [];
 let currentIndex = 0;
 let inGridView = false;
 let hasSeenGrid = false;
+let isTransitioning = false;
 
 function openSerie(serieName) {
   fetch(`photos/${serieName}/liste.json`)
@@ -95,22 +97,38 @@ function showImage(index, direction) {
   gridView.style.display = 'none';
   viewer.style.display = 'flex';
 
-  if (direction && isMobileDevice()) {
-    const offscreenX = direction === 'next' ? '-100%' : '100%';
+  if (direction && isMobileDevice() && !isTransitioning) {
+    isTransitioning = true;
+    const outX = direction === 'next' ? '-100%' : '100%';
+    const inStartX = direction === 'next' ? '100%' : '-100%';
+
+    mainImageIncoming.src = images[index];
+    mainImageIncoming.style.display = 'block';
+    mainImageIncoming.style.transition = 'none';
+    mainImageIncoming.style.transform = `translateX(${inStartX})`;
+
     mainImage.style.transition = 'none';
-    mainImage.style.transform = `translateX(${offscreenX})`;
+    mainImage.style.transform = 'translateX(0)';
 
     requestAnimationFrame(() => {
-      currentIndex = index;
-      mainImage.src = images[index];
       mainImage.style.transition = 'transform 0.25s ease';
-      requestAnimationFrame(() => {
+      mainImageIncoming.style.transition = 'transform 0.25s ease';
+      mainImage.style.transform = `translateX(${outX})`;
+      mainImageIncoming.style.transform = 'translateX(0)';
+
+      setTimeout(() => {
+        currentIndex = index;
+        mainImage.src = images[index];
+        mainImage.style.transition = 'none';
         mainImage.style.transform = 'translateX(0)';
-      });
+        mainImageIncoming.style.display = 'none';
+        isTransitioning = false;
+      }, 250);
     });
-  } else {
+  } else if (!isTransitioning) {
     currentIndex = index;
     mainImage.src = images[index];
+    mainImage.style.transform = 'translateX(0)';
   }
 
   updateArrows();
@@ -257,6 +275,21 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('click', () => {
   ensureFullscreen();
+});
+
+document.addEventListener('click', (e) => {
+  if (!isMobileDevice()) return;
+  const isActive = viewer.style.display !== 'none' && !inGridView;
+  if (!isActive) return;
+
+  const clickX = e.clientX;
+  const screenMiddle = window.innerWidth / 2;
+
+  if (clickX < screenMiddle) {
+    goPrev();
+  } else {
+    goNext();
+  }
 });
 
 let swipeStartX = null;
