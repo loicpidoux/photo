@@ -301,4 +301,13 @@ body.viewing-serie .footer-links-desktop {
   .gallery-btn {
     display: none !important;
   }
+  .close-btn {
+    display: none;
+  }
+  .viewer {
+    height: 100dvh;
+  }
+  .image-container {
+    padding: 2vh 3vw;
+  }
 }
