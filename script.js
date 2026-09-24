@@ -258,11 +258,7 @@ galleryBtn.addEventListener('click', (e) => {
 
 closeBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  if (hasSeenGrid && viewer.style.display !== 'none') {
-    showGrid();
-  } else {
-    closeEverything();
-  }
+  closeEverything();
 });
 
 document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
