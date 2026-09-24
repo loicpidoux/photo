@@ -88,6 +88,7 @@ let isTransitioning = false;
 let currentSerieName = null;
 
 function openSerie(serieName) {
+  switchScratchPage(serieName);
   fetch(`photos/${serieName}/liste.json`)
     .then(res => res.json())
     .then(list => {
@@ -111,6 +112,7 @@ function closeEverything() {
   viewer.style.display = 'none';
   gridView.style.display = 'none';
   document.body.classList.remove('viewing-serie');
+  switchScratchPage('home');
 }
 
 function ensureFullscreen() {
@@ -413,6 +415,8 @@ function restoreFromURL() {
     history.pushState(null, '', location.href);
     return;
   }
+
+  switchScratchPage(serieName);
 
   fetch(`photos/${serieName}/liste.json`)
     .then(res => res.json())
