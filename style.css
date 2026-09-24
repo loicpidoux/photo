@@ -297,17 +297,14 @@ body.viewing-serie .footer-links-desktop {
   user-select: none;
 }
 
-@media (max-width: 600px) {
-  .gallery-btn {
-    display: none !important;
-  }
+@media (max-width: 600px), (pointer: coarse) {
   .close-btn {
     display: none;
   }
-  .viewer {
-    height: 100dvh;
+  .gallery-btn {
+    display: none !important;
   }
-  .image-container {
-    padding: 2vh 3vw;
+  .nav-arrow {
+    display: none;
   }
 }
