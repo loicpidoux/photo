@@ -1,3 +1,8 @@
+function pushUniqueHistoryEntry() {
+  const uniqueTag = '#s' + Date.now() + Math.random().toString(36).slice(2);
+  history.pushState(null, '', uniqueTag);
+}
+
 function isMobileDevice() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
@@ -37,17 +42,13 @@ window.addEventListener('popstate', () => {
   if (!isViewingSerie) return;
 
   if (inGridView) {
-    window.location.replace('https://photo-e8p.pages.dev/?' + Date.now());
-    return;
-  }
-
-  if (hasSeenGrid) {
+    closeEverything();
+  } else if (hasSeenGrid) {
     showGrid();
+    pushUniqueHistoryEntry();
   } else {
     closeEverything();
   }
-
-  history.pushState(null, '', location.href);
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
