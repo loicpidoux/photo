@@ -160,21 +160,23 @@ function layoutGrid() {
 
   const gap = 8;
 
-  if (isMobileDevice()) {
-    const margin = 10;
-    const containerW = window.innerWidth - margin * 2;
-    const containerH = window.innerHeight - margin * 2;
+ if (isMobileDevice()) {
+  const marginSide = 10;
+  const marginTop = 80;
+  const marginBottom = 20;
+  const containerW = window.innerWidth - marginSide * 2;
+  const containerH = window.innerHeight - marginTop - marginBottom;
 
-    const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
+  const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
 
-    gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
+  gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
 
-    cells.forEach(cell => {
-      cell.style.width = cellSize + 'px';
-      cell.style.height = cellSize + 'px';
-    });
-    return;
-  }
+  cells.forEach(cell => {
+    cell.style.width = cellSize + 'px';
+    cell.style.height = cellSize + 'px';
+  });
+  return;
+}
 
   const margin = 80;
   const containerW = window.innerWidth - margin * 2;
