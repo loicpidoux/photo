@@ -28,33 +28,10 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
-history.pushState(null, '', location.href);
-
-let cameFromGridPush = false;
-
 window.addEventListener('popstate', () => {
-  const isGridVisible = gridView.style.display !== 'none';
-  const isViewerVisible = viewer.style.display !== 'none';
-
-  if (isGridVisible) {
-    closeEverything();
-    history.pushState(null, '', location.href);
-    return;
-  }
-
-  if (isViewerVisible) {
-    if (cameFromGridPush) {
-      cameFromGridPush = false;
-      showGrid();
-    } else {
-      closeEverything();
-    }
-    history.pushState(null, '', location.href);
-  }
-});
-
-window.addEventListener('popstate', () => {
-  alert('history.length actuel : ' + history.length);
+  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isViewingSerie) return;
+  closeEverything();
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
@@ -87,16 +64,17 @@ let currentIndex = 0;
 let inGridView = false;
 let hasSeenGrid = false;
 let isTransitioning = false;
+let currentSerieName = null;
 
 function openSerie(serieName) {
   fetch(`photos/${serieName}/liste.json`)
     .then(res => res.json())
     .then(list => {
+      currentSerieName = serieName;
       images = list.map(name => `photos/${serieName}/${name}`);
       currentIndex = 0;
       inGridView = false;
       hasSeenGrid = false;
-      cameFromGridPush = false;
       document.body.classList.add('viewing-serie');
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
@@ -222,6 +200,22 @@ function layoutGrid() {
   });
 }
 
+function navigateToGrid() {
+  const url = new URL(location.href);
+  url.searchParams.set('serie', currentSerieName);
+  url.searchParams.set('vue', 'grille');
+  url.searchParams.delete('photo');
+  window.location.href = url.toString();
+}
+
+function navigateToPhotoFromGrid(index) {
+  const url = new URL(location.href);
+  url.searchParams.set('serie', currentSerieName);
+  url.searchParams.set('vue', 'grille');
+  url.searchParams.set('photo', index);
+  window.location.href = url.toString();
+}
+
 function showGrid() {
   inGridView = true;
   hasSeenGrid = true;
@@ -238,10 +232,10 @@ function showGrid() {
       e.stopPropagation();
       ensureFullscreen();
       if (isMobileDevice()) {
-        cameFromGridPush = true;
-        history.pushState(null, '', location.href);
+        navigateToPhotoFromGrid(i);
+      } else {
+        showImage(i);
       }
-      showImage(i);
     });
     gridInner.appendChild(cell);
   });
@@ -270,7 +264,11 @@ function goNext() {
   if (currentIndex < images.length - 1) {
     showImage(currentIndex + 1, 'next');
   } else {
-    showGrid();
+    if (isMobileDevice()) {
+      navigateToGrid();
+    } else {
+      showGrid();
+    }
   }
 }
 
@@ -294,12 +292,20 @@ galleryBtn.addEventListener('click', (e) => {
 
 closeBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  closeEverything();
+  if (isMobileDevice()) {
+    window.location.href = location.pathname;
+  } else {
+    closeEverything();
+  }
 });
 
 document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
   e.preventDefault();
-  closeEverything();
+  if (isMobileDevice()) {
+    window.location.href = location.pathname;
+  } else {
+    closeEverything();
+  }
 });
 
 document.addEventListener('keydown', (e) => {
@@ -342,7 +348,12 @@ document.addEventListener('touchstart', (e) => {
 
 document.addEventListener('touchend', (e) => {
   if (swipeStartX === null) return;
-  const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (inGridView) {
+    swipeStartX = null;
+    swipeStartY = null;
+    return;
+  }
+  const isActive = viewer.style.display !== 'none';
   if (!isActive) {
     swipeStartX = null;
     swipeStartY = null;
@@ -355,9 +366,9 @@ document.addEventListener('touchend', (e) => {
   const dy = endY - swipeStartY;
 
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_DISTANCE) {
-    if (dx < 0 && !inGridView) {
+    if (dx < 0) {
       goNext();
-    } else if (dx > 0) {
+    } else {
       goPrev();
     }
   }
@@ -378,3 +389,52 @@ function resetInactivityTimer() {
 document.addEventListener('mousemove', resetInactivityTimer);
 document.addEventListener('touchstart', resetInactivityTimer);
 resetInactivityTimer();
+
+function restoreFromURL() {
+  const params = new URLSearchParams(location.search);
+  const serieName = params.get('serie');
+
+  if (!serieName) {
+    history.pushState(null, '', location.href);
+    return;
+  }
+
+  fetch(`photos/${serieName}/liste.json`)
+    .then(res => res.json())
+    .then(list => {
+      currentSerieName = serieName;
+      images = list.map(name => `photos/${serieName}/${name}`);
+      document.body.classList.add('viewing-serie');
+
+      const vue = params.get('vue');
+      const photoParam = params.get('photo');
+
+      if (vue === 'grille') {
+        hasSeenGrid = true;
+        if (photoParam !== null) {
+          const idx = Math.max(0, Math.min(images.length - 1, parseInt(photoParam, 10) || 0));
+          currentIndex = idx;
+          inGridView = false;
+          mainImage.src = images[idx];
+          viewer.style.display = 'flex';
+          gridView.style.display = 'none';
+          updateArrows();
+          galleryBtn.style.display = 'block';
+          preloadRemaining(idx);
+        } else {
+          showGrid();
+        }
+      } else {
+        currentIndex = 0;
+        showImage(0);
+      }
+
+      history.pushState(null, '', location.href);
+    })
+    .catch(err => {
+      console.error("Impossible de restaurer l'état :", err);
+      history.pushState(null, '', location.href);
+    });
+}
+
+restoreFromURL();
