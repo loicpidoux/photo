@@ -28,7 +28,23 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', (e) => {
+  if (isMobileDevice() && e.state && e.state.view) {
+    if (e.state.view === 'grid') {
+      showGrid();
+    } else if (e.state.view === 'viewer') {
+      inGridView = false;
+      gridView.style.display = 'none';
+      viewer.style.display = 'flex';
+      currentIndex = e.state.index || 0;
+      mainImage.src = images[currentIndex];
+      mainImage.style.transform = 'translateX(0)';
+      updateArrows();
+      galleryBtn.style.display = hasSeenGrid ? 'block' : 'none';
+    }
+    return;
+  }
+
   const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
   if (!isViewingSerie) return;
   closeEverything();
@@ -39,7 +55,12 @@ document.querySelectorAll('.serie-link').forEach(link => {
     e.preventDefault();
     const serieName = link.dataset.serie;
 
-    if (!isMobileDevice() && document.documentElement.requestFullscreen) {
+    if (isMobileDevice()) {
+      window.location.href = location.pathname + '?serie=' + encodeURIComponent(serieName);
+      return;
+    }
+
+    if (document.documentElement.requestFullscreen) {
       fadeOutScratch(() => {
         document.documentElement.requestFullscreen().catch(() => {});
         openSerie(serieName);
@@ -200,20 +221,18 @@ function layoutGrid() {
   });
 }
 
-function navigateToGrid() {
-  const url = new URL(location.href);
-  url.searchParams.set('serie', currentSerieName);
-  url.searchParams.set('vue', 'grille');
-  url.searchParams.delete('photo');
-  window.location.href = url.toString();
+function enterGrid() {
+  if (isMobileDevice()) {
+    history.replaceState({ view: 'grid' }, '', location.href);
+  }
+  showGrid();
 }
 
-function navigateToPhotoFromGrid(index) {
-  const url = new URL(location.href);
-  url.searchParams.set('serie', currentSerieName);
-  url.searchParams.set('vue', 'grille');
-  url.searchParams.set('photo', index);
-  window.location.href = url.toString();
+function enterPhotoFromGrid(index) {
+  if (isMobileDevice()) {
+    history.pushState({ view: 'viewer', index: index, fromGrid: true }, '', location.href);
+  }
+  showImage(index);
 }
 
 function showGrid() {
@@ -231,11 +250,7 @@ function showGrid() {
     cell.addEventListener('click', (e) => {
       e.stopPropagation();
       ensureFullscreen();
-      if (isMobileDevice()) {
-        navigateToPhotoFromGrid(i);
-      } else {
-        showImage(i);
-      }
+      enterPhotoFromGrid(i);
     });
     gridInner.appendChild(cell);
   });
@@ -264,11 +279,7 @@ function goNext() {
   if (currentIndex < images.length - 1) {
     showImage(currentIndex + 1, 'next');
   } else {
-    if (isMobileDevice()) {
-      navigateToGrid();
-    } else {
-      showGrid();
-    }
+    enterGrid();
   }
 }
 
@@ -287,7 +298,7 @@ prevBtn.addEventListener('click', goPrev);
 galleryBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   ensureFullscreen();
-  showGrid();
+  enterGrid();
 });
 
 closeBtn.addEventListener('click', (e) => {
@@ -404,34 +415,19 @@ function restoreFromURL() {
     .then(list => {
       currentSerieName = serieName;
       images = list.map(name => `photos/${serieName}/${name}`);
+      currentIndex = 0;
+      inGridView = false;
+      hasSeenGrid = false;
       document.body.classList.add('viewing-serie');
+      viewer.style.display = 'flex';
+      gridView.style.display = 'none';
+      showImage(0);
 
-      const vue = params.get('vue');
-      const photoParam = params.get('photo');
-
-      if (vue === 'grille') {
-        hasSeenGrid = true;
-        if (photoParam !== null) {
-          const idx = Math.max(0, Math.min(images.length - 1, parseInt(photoParam, 10) || 0));
-          currentIndex = idx;
-          inGridView = false;
-          mainImage.src = images[idx];
-          viewer.style.display = 'flex';
-          gridView.style.display = 'none';
-          updateArrows();
-          galleryBtn.style.display = 'block';
-          preloadRemaining(idx);
-        } else {
-          showGrid();
-        }
-      } else {
-        currentIndex = 0;
-        showImage(0);
+      if (isMobileDevice()) {
+        history.replaceState({ view: 'viewer', index: 0 }, '', location.href);
       }
     })
-    .catch(err => {
-      console.error("Impossible de restaurer l'état :", err);
-    });
+    .catch(err => console.error("Impossible de restaurer l'état :", err));
 }
 
 restoreFromURL();
