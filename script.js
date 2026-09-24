@@ -28,6 +28,14 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
+history.pushState(null, '', location.href);
+
+window.addEventListener('popstate', () => {
+  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isViewingSerie) return;
+  closeEverything();
+});
+
 document.querySelectorAll('.serie-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
@@ -160,23 +168,23 @@ function layoutGrid() {
 
   const gap = 8;
 
- if (isMobileDevice()) {
-  const marginSide = 10;
-  const marginTop = 80;
-  const marginBottom = 20;
-  const containerW = window.innerWidth - marginSide * 2;
-  const containerH = window.innerHeight - marginTop - marginBottom;
+  if (isMobileDevice()) {
+    const marginSide = 10;
+    const marginTop = 80;
+    const marginBottom = 20;
+    const containerW = window.innerWidth - marginSide * 2;
+    const containerH = window.innerHeight - marginTop - marginBottom;
 
-  const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
+    const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
 
-  gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
+    gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
 
-  cells.forEach(cell => {
-    cell.style.width = cellSize + 'px';
-    cell.style.height = cellSize + 'px';
-  });
-  return;
-}
+    cells.forEach(cell => {
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+    });
+    return;
+  }
 
   const margin = 80;
   const containerW = window.innerWidth - margin * 2;
