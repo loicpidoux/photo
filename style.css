@@ -197,8 +197,7 @@ body.viewing-serie .footer-links-desktop {
 }
 @media (max-width: 600px) {
   .grid-view {
-    overflow: hidden;
-    align-items: center;
+    align-items: flex-start;
     padding-top: 0;
     padding-bottom: 0;
   }
@@ -300,6 +299,6 @@ body.viewing-serie .footer-links-desktop {
 
 @media (max-width: 600px) {
   .gallery-btn {
-    display: none;
+    display: none !important;
   }
 }
