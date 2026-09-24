@@ -297,14 +297,12 @@ body.viewing-serie .footer-links-desktop {
   object-fit: contain;
   user-select: none;
 }
-@media (max-width: 600px) {
-  .close-btn {
-    display: none;
-  }
-}
 
 @media (max-width: 600px) {
   .gallery-btn {
-    display: none !important;
+    display: none;
+  }
+  .grid-view {
+    padding-top: 70px;
   }
 }
