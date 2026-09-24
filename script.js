@@ -1,8 +1,3 @@
-function pushUniqueHistoryEntry() {
-  const uniqueTag = '#s' + Date.now() + Math.random().toString(36).slice(2);
-  history.pushState(null, '', uniqueTag);
-}
-
 function isMobileDevice() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
@@ -33,8 +28,14 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
+let historyCounter = 0;
+function pushUniqueState() {
+  historyCounter++;
+  history.pushState(null, '', '#v' + historyCounter);
+}
+
 for (let i = 0; i < 5; i++) {
-  history.pushState(null, '', location.href);
+  pushUniqueState();
 }
 
 window.addEventListener('popstate', () => {
@@ -45,10 +46,11 @@ window.addEventListener('popstate', () => {
     closeEverything();
   } else if (hasSeenGrid) {
     showGrid();
-    pushUniqueHistoryEntry();
   } else {
     closeEverything();
   }
+
+  pushUniqueState();
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
@@ -93,7 +95,7 @@ function openSerie(serieName) {
       document.body.classList.add('viewing-serie');
 
       if (isMobileDevice()) {
-        history.pushState(null, '', location.href);
+        pushUniqueState();
       }
 
       viewer.style.display = 'flex';
