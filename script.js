@@ -37,7 +37,7 @@ window.addEventListener('popstate', () => {
   if (!isViewingSerie) return;
 
   if (inGridView) {
-    window.location.href = 'https://photo-e8p.pages.dev/';
+    window.location.replace('https://photo-e8p.pages.dev/?' + Date.now());
     return;
   }
 
