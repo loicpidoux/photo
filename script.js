@@ -30,10 +30,27 @@ updateFrameTransform();
 
 history.pushState(null, '', location.href);
 
+let cameFromGridPush = false;
+
 window.addEventListener('popstate', () => {
-  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
-  if (!isViewingSerie) return;
-  closeEverything();
+  const isGridVisible = gridView.style.display !== 'none';
+  const isViewerVisible = viewer.style.display !== 'none';
+
+  if (isGridVisible) {
+    closeEverything();
+    history.pushState(null, '', location.href);
+    return;
+  }
+
+  if (isViewerVisible) {
+    if (cameFromGridPush) {
+      cameFromGridPush = false;
+      showGrid();
+    } else {
+      closeEverything();
+    }
+    history.pushState(null, '', location.href);
+  }
 });
 
 document.querySelectorAll('.serie-link').forEach(link => {
@@ -75,6 +92,7 @@ function openSerie(serieName) {
       currentIndex = 0;
       inGridView = false;
       hasSeenGrid = false;
+      cameFromGridPush = false;
       document.body.classList.add('viewing-serie');
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
@@ -171,7 +189,7 @@ function layoutGrid() {
   if (isMobileDevice()) {
     const marginSide = 10;
     const marginTop = 80;
-    const marginBottom = 20;
+    const marginBottom = 80;
     const containerW = window.innerWidth - marginSide * 2;
     const containerH = window.innerHeight - marginTop - marginBottom;
 
@@ -215,6 +233,10 @@ function showGrid() {
     cell.addEventListener('click', (e) => {
       e.stopPropagation();
       ensureFullscreen();
+      if (isMobileDevice()) {
+        cameFromGridPush = true;
+        history.pushState(null, '', location.href);
+      }
       showImage(i);
     });
     gridInner.appendChild(cell);
