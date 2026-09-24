@@ -428,12 +428,9 @@ function restoreFromURL() {
         currentIndex = 0;
         showImage(0);
       }
-
-      history.pushState(null, '', location.href);
     })
     .catch(err => {
       console.error("Impossible de restaurer l'état :", err);
-      history.pushState(null, '', location.href);
     });
 }
 
