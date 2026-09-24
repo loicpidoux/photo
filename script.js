@@ -28,31 +28,6 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
-let historyCounter = 0;
-function pushUniqueState() {
-  historyCounter++;
-  history.pushState(null, '', '#v' + historyCounter);
-}
-
-for (let i = 0; i < 5; i++) {
-  pushUniqueState();
-}
-
-window.addEventListener('popstate', () => {
-  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
-  if (!isViewingSerie) return;
-
-  if (inGridView) {
-    closeEverything();
-  } else if (hasSeenGrid) {
-    showGrid();
-  } else {
-    closeEverything();
-  }
-
-  pushUniqueState();
-});
-
 document.querySelectorAll('.serie-link').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
@@ -93,11 +68,6 @@ function openSerie(serieName) {
       inGridView = false;
       hasSeenGrid = false;
       document.body.classList.add('viewing-serie');
-
-      if (isMobileDevice()) {
-        pushUniqueState();
-      }
-
       viewer.style.display = 'flex';
       gridView.style.display = 'none';
       showImage(0);
@@ -288,7 +258,11 @@ galleryBtn.addEventListener('click', (e) => {
 
 closeBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  closeEverything();
+  if (hasSeenGrid && viewer.style.display !== 'none') {
+    showGrid();
+  } else {
+    closeEverything();
+  }
 });
 
 document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
