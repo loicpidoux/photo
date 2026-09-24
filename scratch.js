@@ -368,6 +368,3 @@ window.addEventListener('pagehide', () => {
   if (isMobileDeviceScratch()) return;
   saveScratchPageNow(currentScratchPage);
 });
-
-// Chargement initial de la page d'accueil
-loadScratchPage('home');
