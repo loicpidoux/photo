@@ -412,6 +412,7 @@ function restoreFromURL() {
   const serieName = params.get('serie');
 
   if (!serieName) {
+    switchScratchPage('home');
     history.pushState(null, '', location.href);
     return;
   }
