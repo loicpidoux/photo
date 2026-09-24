@@ -30,6 +30,10 @@ updateFrameTransform();
 
 history.pushState(null, '', location.href);
 
+window.addEventListener('popstate', () => {
+  alert('history.length actuel : ' + history.length);
+});
+
 let cameFromGridPush = false;
 
 window.addEventListener('popstate', () => {
