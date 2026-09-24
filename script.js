@@ -37,8 +37,11 @@ window.addEventListener('popstate', () => {
   if (!isViewingSerie) return;
 
   if (inGridView) {
-    closeEverything();
-  } else if (hasSeenGrid) {
+    window.location.href = 'https://photo-e8p.pages.dev/';
+    return;
+  }
+
+  if (hasSeenGrid) {
     showGrid();
   } else {
     closeEverything();
