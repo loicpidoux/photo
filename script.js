@@ -279,7 +279,11 @@ function goNext() {
   if (currentIndex < images.length - 1) {
     showImage(currentIndex + 1, 'next');
   } else {
-    enterGrid();
+    if (isMobileDevice() && history.state && history.state.fromGrid) {
+      history.back();
+    } else {
+      enterGrid();
+    }
   }
 }
 
