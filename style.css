@@ -103,6 +103,7 @@ body.viewing-serie .footer-links-desktop {
 
 .viewer {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   display: flex;
   align-items: center;
