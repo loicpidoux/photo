@@ -1,19 +1,17 @@
-function isMobileDeviceScratch() {
+function isMobileDevice() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
 
-const REF_W = 1920;
-const REF_H = 1140;
+const FRAME_REF_W = 1920;
+const FRAME_REF_H = 1140;
+const referenceFrame = document.getElementById('referenceFrame');
 
-const scratchCanvas = document.getElementById('scratchCanvas');
-const scratchCtx = scratchCanvas.getContext('2d');
+const FRAME_MOBILE_ZOOM_FACTOR = 1.3;
 
-const MOBILE_ZOOM_FACTOR = 1.3;
-
-function updateScratchTransform() {
-  let scale = Math.max(screen.width / REF_W, screen.height / REF_H);
-  if (isMobileDeviceScratch()) {
-    scale *= MOBILE_ZOOM_FACTOR;
+function updateFrameTransform() {
+  let scale = Math.max(screen.width / FRAME_REF_W, screen.height / FRAME_REF_H);
+  if (isMobileDevice()) {
+    scale *= FRAME_MOBILE_ZOOM_FACTOR;
   }
 
   let offsetY = 0;
@@ -25,260 +23,419 @@ function updateScratchTransform() {
     offsetY = trueScreenCenter - viewportCenterOnScreen;
   }
 
-  scratchCanvas.style.transform = `translate(-50%, calc(-50% + ${offsetY}px)) scale(${scale})`;
+  referenceFrame.style.transform = `translate(-50%, calc(-50% + ${offsetY}px)) scale(${scale})`;
 }
-window.addEventListener('resize', updateScratchTransform);
-updateScratchTransform();
+window.addEventListener('resize', updateFrameTransform);
+updateFrameTransform();
 
-function fadeOutScratch(callback) {
-  scratchCanvas.style.transition = 'opacity 0.15s ease';
-  scratchCanvas.style.opacity = '0';
-  setTimeout(() => {
-    callback();
-    setTimeout(() => {
-      updateScratchTransform();
-      scratchCanvas.style.opacity = '1';
-    }, 50);
-  }, 150);
-}
-
-function screenToFrameCoords(clientX, clientY) {
-  const rect = scratchCanvas.getBoundingClientRect();
-  return {
-    x: (clientX - rect.left) / rect.width * REF_W,
-    y: (clientY - rect.top) / rect.height * REF_H
-  };
-}
-
-const deltaCanvas = document.createElement('canvas');
-deltaCanvas.width = REF_W;
-deltaCanvas.height = REF_H;
-const deltaCtx = deltaCanvas.getContext('2d');
-
-fetch('/scratch')
-  .then(res => res.json())
-  .then(({ main, delta }) => {
-    if (main) {
-      const img = new Image();
-      img.onload = () => scratchCtx.drawImage(img, 0, 0);
-      img.src = main;
+window.addEventListener('popstate', (e) => {
+  if (isMobileDevice() && e.state && e.state.view) {
+    if (e.state.view === 'grid') {
+      showGrid();
+    } else if (e.state.view === 'viewer') {
+      inGridView = false;
+      gridView.style.display = 'none';
+      viewer.style.display = 'flex';
+      currentIndex = e.state.index || 0;
+      mainImage.src = images[currentIndex];
+      mainImage.style.transform = 'translateX(0)';
+      updateArrows();
+      galleryBtn.style.display = hasSeenGrid ? 'block' : 'none';
     }
-    if (delta) {
-      const img = new Image();
-      img.onload = () => {
-        scratchCtx.globalCompositeOperation = 'lighter';
-        scratchCtx.drawImage(img, 0, 0);
-        deltaCtx.globalCompositeOperation = 'lighter';
-        deltaCtx.drawImage(img, 0, 0);
-        hasUnsavedScratchChanges = true;
-        hasUnsavedDelta = true;
-      };
-      img.src = delta;
+    return;
+  }
+
+  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isViewingSerie) return;
+  closeEverything();
+});
+
+document.querySelectorAll('.serie-link').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const serieName = link.dataset.serie;
+
+    if (isMobileDevice()) {
+      window.location.href = location.pathname + '?serie=' + encodeURIComponent(serieName);
+      return;
     }
-  })
-  .catch(() => {});
 
-const SCRATCH_SKIP_CHANCE = 0.4;
-const SCRATCH_MAX_OPACITY = 0.04;
-const SCRATCH_LINE_WIDTH = 1;
-const SCRATCH_FADE_MS = 60;
-
-const SCRATCH_INTRO_INACTIVITY_MS = 10;
-const SCRATCH_RANDOM_BOOST_INACTIVITY_MS = 1000;
-const SCRATCH_BOOST_OPACITY_MIN = 0.04;
-const SCRATCH_BOOST_OPACITY_MAX = 0.14;
-const SCRATCH_RANDOM_BOOST_CHANCE = 0.8;
-const SCRATCH_BOOST_FADE_MS = 0;
-
-const SCRATCH_STROKE_GROUP_SIZE_MIN = 1;
-const SCRATCH_STROKE_GROUP_SIZE_MAX = 5;
-let scratchGroupRemaining = 0;
-let scratchGroupOpacity = 0;
-
-let scratchIntroBoostDone = false;
-
-let scratchLastScreenX = null;
-let scratchLastScreenY = null;
-let scratchLastFrameX = null;
-let scratchLastFrameY = null;
-let scratchLastMoveTime = null;
-let hasUnsavedScratchChanges = false;
-let hasUnsavedDelta = false;
-
-const pendingStrokes = [];
-
-function bakeStroke(stroke) {
-  [scratchCtx, deltaCtx].forEach(ctx => {
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = `rgba(255,255,255,${stroke.targetOpacity})`;
-    ctx.lineWidth = SCRATCH_LINE_WIDTH;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(stroke.x1, stroke.y1);
-    ctx.lineTo(stroke.x2, stroke.y2);
-    ctx.stroke();
+    if (document.documentElement.requestFullscreen) {
+      fadeOutScratch(() => {
+        document.documentElement.requestFullscreen().catch(() => {});
+        openSerie(serieName);
+      });
+    } else {
+      openSerie(serieName);
+    }
   });
-  hasUnsavedScratchChanges = true;
-  hasUnsavedDelta = true;
+});
+
+const viewer = document.getElementById('viewer');
+const gridView = document.getElementById('gridView');
+const mainImage = document.getElementById('mainImage');
+const mainImageIncoming = document.getElementById('mainImageIncoming');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const closeBtn = document.getElementById('closeBtn');
+const galleryBtn = document.getElementById('galleryBtn');
+
+let images = [];
+let currentIndex = 0;
+let inGridView = false;
+let hasSeenGrid = false;
+let isTransitioning = false;
+let currentSerieName = null;
+
+function openSerie(serieName) {
+  switchScratchPage(serieName);
+  fetch(`photos/${serieName}/liste.json`)
+    .then(res => res.json())
+    .then(list => {
+      currentSerieName = serieName;
+      images = list.map(name => `photos/${serieName}/${name}`);
+      currentIndex = 0;
+      inGridView = false;
+      hasSeenGrid = false;
+      document.body.classList.add('viewing-serie');
+      viewer.style.display = 'flex';
+      gridView.style.display = 'none';
+      showImage(0);
+    })
+    .catch(err => console.error("Impossible de charger la série :", err));
 }
 
-function bakeAllPending() {
-  while (pendingStrokes.length > 0) {
-    const stroke = pendingStrokes.pop();
-    clearTimeout(stroke.timeoutId);
-    if (!stroke.baked) {
-      bakeStroke(stroke);
-    }
-    if (stroke.miniEl) stroke.miniEl.remove();
+function closeEverything() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+  viewer.style.display = 'none';
+  gridView.style.display = 'none';
+  document.body.classList.remove('viewing-serie');
+  switchScratchPage('home');
+}
+
+function ensureFullscreen() {
+  if (isMobileDevice()) return;
+  const isViewingSerie = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (isViewingSerie && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
   }
 }
 
-function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs) {
-  const pad = SCRATCH_LINE_WIDTH / 2 + 2;
-  const minX = Math.min(screenX1, screenX2) - pad;
-  const minY = Math.min(screenY1, screenY2) - pad;
-  const w = Math.abs(screenX2 - screenX1) + pad * 2;
-  const h = Math.abs(screenY2 - screenY1) + pad * 2;
+function showImage(index, direction) {
+  inGridView = false;
+  gridView.style.display = 'none';
+  viewer.style.display = 'flex';
 
-  const mini = document.createElement('canvas');
-  mini.width = w;
-  mini.height = h;
-  mini.style.position = 'fixed';
-  mini.style.left = minX + 'px';
-  mini.style.top = minY + 'px';
-  mini.style.width = w + 'px';
-  mini.style.height = h + 'px';
-  mini.style.pointerEvents = 'none';
-  mini.style.zIndex = 2;
-  mini.style.opacity = fadeMs > 0 ? '0' : '1';
-  mini.style.transition = fadeMs > 0 ? `opacity ${fadeMs}ms linear` : 'none';
-  document.body.appendChild(mini);
+  if (direction && isMobileDevice() && !isTransitioning) {
+    isTransitioning = true;
+    const outX = direction === 'next' ? '-100%' : '100%';
+    const inStartX = direction === 'next' ? '100%' : '-100%';
 
-  const mctx = mini.getContext('2d');
-  mctx.strokeStyle = `rgba(255,255,255,${targetOpacity})`;
-  mctx.lineWidth = SCRATCH_LINE_WIDTH;
-  mctx.lineCap = 'round';
-  mctx.beginPath();
-  mctx.moveTo(screenX1 - minX, screenY1 - minY);
-  mctx.lineTo(screenX2 - minX, screenY2 - minY);
-  mctx.stroke();
+    mainImageIncoming.src = images[index];
+    mainImageIncoming.style.display = 'block';
+    mainImageIncoming.style.transition = 'none';
+    mainImageIncoming.style.transform = `translateX(${inStartX})`;
 
-  if (fadeMs > 0) {
+    mainImage.style.transition = 'none';
+    mainImage.style.transform = 'translateX(0)';
+
     requestAnimationFrame(() => {
-      mini.style.opacity = '1';
+      mainImage.style.transition = 'transform 0.25s ease';
+      mainImageIncoming.style.transition = 'transform 0.25s ease';
+      mainImage.style.transform = `translateX(${outX})`;
+      mainImageIncoming.style.transform = 'translateX(0)';
+
+      setTimeout(() => {
+        currentIndex = index;
+        mainImage.src = images[index];
+        mainImage.style.transition = 'none';
+        mainImage.style.transform = 'translateX(0)';
+        mainImageIncoming.style.display = 'none';
+        isTransitioning = false;
+      }, 250);
     });
+  } else if (!isTransitioning) {
+    currentIndex = index;
+    mainImage.src = images[index];
+    mainImage.style.transform = 'translateX(0)';
   }
 
-  const strokeRecord = { x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini };
-
-  strokeRecord.timeoutId = setTimeout(() => {
-    bakeStroke(strokeRecord);
-    strokeRecord.baked = true;
-    mini.remove();
-    const idx = pendingStrokes.indexOf(strokeRecord);
-    if (idx !== -1) pendingStrokes.splice(idx, 1);
-  }, fadeMs + 30);
-
-  pendingStrokes.push(strokeRecord);
+  updateArrows();
+  galleryBtn.style.display = hasSeenGrid ? 'block' : 'none';
+  if (index === 0) {
+    preloadRemaining(0);
+  }
 }
 
-function processScratchPoint(screenX, screenY) {
-  const frame = screenToFrameCoords(screenX, screenY);
-  const now = performance.now();
-  const inactivityGap = scratchLastMoveTime !== null ? now - scratchLastMoveTime : null;
-
-  if (scratchLastScreenX !== null) {
-    let shouldDraw = Math.random() >= SCRATCH_SKIP_CHANCE;
-    let targetOpacity = null;
-    let fadeMs = SCRATCH_FADE_MS;
-
-    const eligibleForIntro = inactivityGap !== null && inactivityGap >= SCRATCH_INTRO_INACTIVITY_MS && !scratchIntroBoostDone;
-    const eligibleForRandomBoost = inactivityGap !== null && inactivityGap >= SCRATCH_RANDOM_BOOST_INACTIVITY_MS;
-
-    if (eligibleForIntro) {
-      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
-      fadeMs = SCRATCH_BOOST_FADE_MS;
-      scratchIntroBoostDone = true;
-      shouldDraw = true;
-    } else if (eligibleForRandomBoost && Math.random() < SCRATCH_RANDOM_BOOST_CHANCE) {
-      targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
-      fadeMs = SCRATCH_BOOST_FADE_MS;
-      shouldDraw = true;
-    } else if (shouldDraw) {
-      if (scratchGroupRemaining > 0) {
-        targetOpacity = scratchGroupOpacity;
-        scratchGroupRemaining--;
-      } else {
-        targetOpacity = Math.random() * SCRATCH_MAX_OPACITY;
-        scratchGroupOpacity = targetOpacity;
-        scratchGroupRemaining = Math.floor(
-          SCRATCH_STROKE_GROUP_SIZE_MIN + Math.random() * (SCRATCH_STROKE_GROUP_SIZE_MAX - SCRATCH_STROKE_GROUP_SIZE_MIN)
-        );
-      }
-    }
-
-    if (shouldDraw && targetOpacity !== null) {
-      spawnFadingStroke(
-        scratchLastScreenX, scratchLastScreenY, screenX, screenY,
-        scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-        targetOpacity, fadeMs
-      );
+function computeGridLayout(n, containerW, containerH, gap) {
+  let best = { cols: 1, rows: n, cellSize: 0 };
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const cellW = (containerW - gap * (cols - 1)) / cols;
+    const cellH = (containerH - gap * (rows - 1)) / rows;
+    const cellSize = Math.min(cellW, cellH);
+    if (cellSize > best.cellSize) {
+      best = { cols, rows, cellSize };
     }
   }
-
-  scratchLastScreenX = screenX;
-  scratchLastScreenY = screenY;
-  scratchLastFrameX = frame.x;
-  scratchLastFrameY = frame.y;
-  scratchLastMoveTime = now;
+  return best;
 }
 
-if (!isMobileDeviceScratch()) {
-  document.addEventListener('mousemove', (e) => {
-    processScratchPoint(e.clientX, e.clientY);
+function layoutGrid() {
+  const gridInner = document.getElementById('gridInner');
+  const cells = gridInner.querySelectorAll('.grid-cell');
+  const n = cells.length;
+  if (n === 0) return;
+
+  const gap = 8;
+
+  if (isMobileDevice()) {
+    const marginSide = 10;
+    const marginTop = 20;
+    const marginBottom = 20;
+    const containerW = window.innerWidth - marginSide * 2;
+    const containerH = window.innerHeight - marginTop - marginBottom;
+
+    const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
+
+    gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
+
+    cells.forEach(cell => {
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+    });
+    return;
+  }
+
+  const margin = 80;
+  const containerW = window.innerWidth - margin * 2;
+  const containerH = window.innerHeight - margin * 2;
+
+  const { cols, cellSize } = computeGridLayout(n, containerW, containerH, gap);
+
+  gridInner.style.width = (cols * cellSize + gap * (cols - 1)) + 'px';
+
+  cells.forEach(cell => {
+    cell.style.width = cellSize + 'px';
+    cell.style.height = cellSize + 'px';
   });
 }
 
-function saveMainState() {
-  if (isMobileDeviceScratch()) return;
-  if (!hasUnsavedScratchChanges) return;
-  try {
-    const dataUrl = scratchCanvas.toDataURL('image/png');
-    fetch('/scratch', {
-      method: 'POST',
-      body: JSON.stringify({ type: 'main', dataUrl }),
-      headers: { 'Content-Type': 'application/json' }
-    }).catch(() => {});
-    hasUnsavedScratchChanges = false;
-    hasUnsavedDelta = false;
-    deltaCtx.clearRect(0, 0, deltaCanvas.width, deltaCanvas.height);
-  } catch (e) {}
+function enterGrid() {
+  if (isMobileDevice()) {
+    history.replaceState({ view: 'grid' }, '', location.href);
+  }
+  showGrid();
 }
 
-setInterval(saveMainState, 10000);
-
-function saveDeltaState() {
-  if (isMobileDeviceScratch()) return;
-  if (!hasUnsavedDelta) return;
-  try {
-    const dataUrl = deltaCanvas.toDataURL('image/png');
-    fetch('/scratch', {
-      method: 'POST',
-      body: JSON.stringify({ type: 'delta', dataUrl }),
-      headers: { 'Content-Type': 'application/json' },
-      keepalive: true
-    }).catch(() => {});
-    hasUnsavedDelta = false;
-  } catch (e) {}
+function enterPhotoFromGrid(index) {
+  if (isMobileDevice()) {
+    history.pushState({ view: 'viewer', index: index, fromGrid: true }, '', location.href);
+  }
+  showImage(index);
 }
 
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    bakeAllPending();
-    saveDeltaState();
+function showGrid() {
+  inGridView = true;
+  hasSeenGrid = true;
+  viewer.style.display = 'none';
+  const gridInner = document.getElementById('gridInner');
+  gridInner.innerHTML = '';
+  images.forEach((src, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    const img = document.createElement('img');
+    img.src = src;
+    cell.appendChild(img);
+    cell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      ensureFullscreen();
+      enterPhotoFromGrid(i);
+    });
+    gridInner.appendChild(cell);
+  });
+  gridView.style.display = 'flex';
+  layoutGrid();
+}
+
+window.addEventListener('resize', () => {
+  if (inGridView) layoutGrid();
+});
+
+function updateArrows() {
+  prevBtn.style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
+  nextBtn.style.visibility = 'visible';
+}
+
+function preloadRemaining(fromIndex) {
+  for (let i = fromIndex + 1; i < images.length; i++) {
+    const img = new Image();
+    img.src = images[i];
+  }
+}
+
+function goNext() {
+  ensureFullscreen();
+  if (currentIndex < images.length - 1) {
+    showImage(currentIndex + 1, 'next');
+  } else {
+    if (isMobileDevice() && history.state && history.state.fromGrid) {
+      history.back();
+    } else {
+      enterGrid();
+    }
+  }
+}
+
+function goPrev() {
+  ensureFullscreen();
+  if (inGridView) {
+    showImage(images.length - 1, 'prev');
+  } else if (currentIndex > 0) {
+    showImage(currentIndex - 1, 'prev');
+  }
+}
+
+nextBtn.addEventListener('click', goNext);
+prevBtn.addEventListener('click', goPrev);
+
+galleryBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  ensureFullscreen();
+  enterGrid();
+});
+
+closeBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (isMobileDevice()) {
+    window.location.href = location.pathname;
+  } else {
+    closeEverything();
   }
 });
-window.addEventListener('pagehide', () => {
-  bakeAllPending();
-  saveDeltaState();
+
+document.getElementById('closeBtnGrid').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (isMobileDevice()) {
+    window.location.href = location.pathname;
+  } else {
+    closeEverything();
+  }
 });
+
+document.addEventListener('keydown', (e) => {
+  const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isActive) return;
+  if (e.key === 'ArrowRight') goNext();
+  if (e.key === 'ArrowLeft') goPrev();
+  if (e.key === 'Escape') closeEverything();
+});
+
+document.addEventListener('click', () => {
+  ensureFullscreen();
+});
+
+document.addEventListener('click', (e) => {
+  if (!isMobileDevice()) return;
+  const isActive = viewer.style.display !== 'none' && !inGridView;
+  if (!isActive) return;
+
+  const clickX = e.clientX;
+  const screenMiddle = window.innerWidth / 2;
+
+  if (clickX < screenMiddle) {
+    goPrev();
+  } else {
+    goNext();
+  }
+});
+
+let swipeStartX = null;
+let swipeStartY = null;
+const SWIPE_MIN_DISTANCE = 50;
+
+document.addEventListener('touchstart', (e) => {
+  const isActive = viewer.style.display !== 'none' || gridView.style.display !== 'none';
+  if (!isActive) return;
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (swipeStartX === null) return;
+  if (inGridView) {
+    swipeStartX = null;
+    swipeStartY = null;
+    return;
+  }
+  const isActive = viewer.style.display !== 'none';
+  if (!isActive) {
+    swipeStartX = null;
+    swipeStartY = null;
+    return;
+  }
+
+  const endX = e.changedTouches[0].clientX;
+  const endY = e.changedTouches[0].clientY;
+  const dx = endX - swipeStartX;
+  const dy = endY - swipeStartY;
+
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_DISTANCE) {
+    if (dx < 0) {
+      goNext();
+    } else {
+      goPrev();
+    }
+  }
+
+  swipeStartX = null;
+  swipeStartY = null;
+});
+
+let inactivityTimer;
+function resetInactivityTimer() {
+  if (inGridView) return;
+  viewer.classList.remove('controls-hidden');
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => {
+    viewer.classList.add('controls-hidden');
+  }, 2000);
+}
+document.addEventListener('mousemove', resetInactivityTimer);
+document.addEventListener('touchstart', resetInactivityTimer);
+resetInactivityTimer();
+
+function restoreFromURL() {
+  const params = new URLSearchParams(location.search);
+  const serieName = params.get('serie');
+
+  if (!serieName) {
+    history.pushState(null, '', location.href);
+    return;
+  }
+
+  switchScratchPage(serieName);
+
+  fetch(`photos/${serieName}/liste.json`)
+    .then(res => res.json())
+    .then(list => {
+      currentSerieName = serieName;
+      images = list.map(name => `photos/${serieName}/${name}`);
+      currentIndex = 0;
+      inGridView = false;
+      hasSeenGrid = false;
+      document.body.classList.add('viewing-serie');
+      viewer.style.display = 'flex';
+      gridView.style.display = 'none';
+      showImage(0);
+
+      if (isMobileDevice()) {
+        history.replaceState({ view: 'viewer', index: 0 }, '', location.href);
+      }
+    })
+    .catch(err => console.error("Impossible de restaurer l'état :", err));
+}
+
+restoreFromURL();
