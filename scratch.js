@@ -177,12 +177,7 @@ function fadeOutScratch(callback) {
   setTimeout(() => {
     callback();
 
-    const waitForLoad = scratchTransitionPromise
-      ? Promise.race([
-          scratchTransitionPromise,
-          new Promise(resolve => setTimeout(resolve, 800))
-        ])
-      : new Promise(resolve => setTimeout(resolve, 50));
+    const waitForLoad = scratchTransitionPromise || new Promise(resolve => setTimeout(resolve, 50));
 
     waitForLoad.then(() => {
       updateScratchTransform();
