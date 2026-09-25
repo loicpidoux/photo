@@ -37,6 +37,7 @@ let currentScratchPage = 'home';
 let scratchTransitionInProgress = false;
 let scratchPendingNextPage = null;
 let scratchTransitionPromise = null;
+let scratchLoadGeneration = 0;
 let scratchPageLoadedResolve = null;
 let scratchPageLoadedPromise = null;
 
@@ -73,6 +74,9 @@ function fetchScratchImage(pageName, type) {
 }
 
 function loadScratchPage(pageName) {
+  scratchLoadGeneration++;
+  const myGeneration = scratchLoadGeneration;
+
   scratchCtx.clearRect(0, 0, REF_W, REF_H);
   deltaCtx.clearRect(0, 0, REF_W, REF_H);
 
@@ -81,12 +85,14 @@ function loadScratchPage(pageName) {
   });
 
   fetchScratchImage(pageName, 'main').then(mainImg => {
+    if (myGeneration !== scratchLoadGeneration) return null;
     if (mainImg) {
       scratchCtx.globalCompositeOperation = 'source-over';
       scratchCtx.drawImage(mainImg, 0, 0);
     }
     return fetchScratchImage(pageName, 'delta');
   }).then(deltaImg => {
+    if (myGeneration !== scratchLoadGeneration) return;
     if (deltaImg) {
       scratchCtx.globalCompositeOperation = 'lighter';
       scratchCtx.drawImage(deltaImg, 0, 0);
@@ -97,7 +103,7 @@ function loadScratchPage(pageName) {
     }
     if (scratchPageLoadedResolve) scratchPageLoadedResolve();
   }).catch(() => {
-    if (scratchPageLoadedResolve) scratchPageLoadedResolve();
+    if (myGeneration === scratchLoadGeneration && scratchPageLoadedResolve) scratchPageLoadedResolve();
   });
 }
 
