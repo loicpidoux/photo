@@ -224,6 +224,22 @@ const SCRATCH_WOBBLE_AMPLITUDE = 0.12;
 const SCRATCH_WOBBLE_FREQUENCY = 11;
 const SCRATCH_MAX_COMPENSATION = 4;
 
+// Correlation vitesse -> % de saut : sous SCRATCH_SPEED_LOW (px/ms), on est au
+// pourcentage le plus eleve (trait tres pointille) ; au-dessus de SCRATCH_SPEED_HIGH,
+// au pourcentage le plus bas (trait presque plein). A ajuster apres test reel.
+const SCRATCH_SPEED_LOW = 0.03;
+const SCRATCH_SPEED_HIGH = 1.2;
+const SCRATCH_SKIP_AT_SLOW = 0.92;
+const SCRATCH_SKIP_AT_FAST = 0.05;
+const SCRATCH_SPEED_JITTER = 0.2; // variation aleatoire ajoutee par-dessus, pour rester organique
+
+function skipPctFromSpeed(speed) {
+  const t = Math.min(Math.max((speed - SCRATCH_SPEED_LOW) / (SCRATCH_SPEED_HIGH - SCRATCH_SPEED_LOW), 0), 1);
+  const base = SCRATCH_SKIP_AT_SLOW - t * (SCRATCH_SKIP_AT_SLOW - SCRATCH_SKIP_AT_FAST);
+  const jitter = (Math.random() - 0.5) * SCRATCH_SPEED_JITTER;
+  return Math.min(Math.max(base + jitter, 0), 1);
+}
+
 function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed) {
   const canvasW = ctx.canvas.width;
   const canvasH = ctx.canvas.height;
@@ -309,11 +325,12 @@ function bakeAllPending() {
   }
 }
 
-function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs) {
-  // Tirés une seule fois, dès la naissance du trait : le même % de saut et la même
-  // ondulation serviront à la fois pour l'aperçu (ci-dessous) et pour le résultat
-  // figé (bakeStroke) - le style ne change donc pas quand le trait se fige.
-  const skipPct = Math.random();
+function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, skipPct) {
+  // skipPct est calculé par l'appelant à partir de la vitesse du geste (voir
+  // processScratchPoint) - tiré une seule fois, dès la naissance du trait : le
+  // même % de saut et la même ondulation serviront à la fois pour l'aperçu
+  // (ci-dessous) et pour le résultat figé (bakeStroke) - le style ne change donc
+  // pas quand le trait se fige.
   const wobbleSeed = Math.random() * Math.PI * 2;
 
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
@@ -401,10 +418,15 @@ function processScratchPoint(screenX, screenY) {
     }
 
     if (shouldDraw && targetOpacity !== null) {
+      const distance = Math.hypot(screenX - scratchLastScreenX, screenY - scratchLastScreenY);
+      const dt = Math.max(inactivityGap || 1, 1); // ms, protege contre une division par ~0
+      const speed = distance / dt; // px/ms
+      const skipPct = skipPctFromSpeed(speed);
+
       spawnFadingStroke(
         scratchLastScreenX, scratchLastScreenY, screenX, screenY,
         scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-        targetOpacity, fadeMs
+        targetOpacity, fadeMs, skipPct
       );
     }
   }
