@@ -36,6 +36,7 @@ updateScratchTransform();
 let currentScratchPage = 'home';
 let scratchTransitionInProgress = false;
 let scratchPendingNextPage = null;
+let scratchTransitionPromise = null;
 let scratchPageLoadedResolve = null;
 let scratchPageLoadedPromise = null;
 
@@ -138,22 +139,22 @@ function saveScratchPageNow(pageName) {
 function switchScratchPage(nextPage) {
   if (!VALID_SCRATCH_PAGES.includes(nextPage)) {
     console.error('Page de rayures inconnue :', nextPage);
-    return;
+    return Promise.resolve();
   }
   if (nextPage === currentScratchPage && scratchPageLoadedPromise) {
-    return;
+    return scratchPageLoadedPromise;
   }
 
   if (scratchTransitionInProgress) {
     scratchPendingNextPage = nextPage;
-    return;
+    return scratchTransitionPromise || Promise.resolve();
   }
 
   scratchTransitionInProgress = true;
   bakeAllPending();
   const pageToSave = currentScratchPage;
 
-  saveScratchPageNow(pageToSave).then(() => {
+  scratchTransitionPromise = saveScratchPageNow(pageToSave).then(() => {
     currentScratchPage = nextPage;
     loadScratchPage(nextPage);
     scratchTransitionInProgress = false;
@@ -161,9 +162,13 @@ function switchScratchPage(nextPage) {
     if (scratchPendingNextPage !== null) {
       const queued = scratchPendingNextPage;
       scratchPendingNextPage = null;
-      switchScratchPage(queued);
+      return switchScratchPage(queued);
     }
+
+    return scratchPageLoadedPromise;
   });
+
+  return scratchTransitionPromise;
 }
 
 function fadeOutScratch(callback) {
@@ -172,10 +177,10 @@ function fadeOutScratch(callback) {
   setTimeout(() => {
     callback();
 
-    const waitForLoad = scratchPageLoadedPromise
+    const waitForLoad = scratchTransitionPromise
       ? Promise.race([
-          scratchPageLoadedPromise,
-          new Promise(resolve => setTimeout(resolve, 500))
+          scratchTransitionPromise,
+          new Promise(resolve => setTimeout(resolve, 800))
         ])
       : new Promise(resolve => setTimeout(resolve, 50));
 
