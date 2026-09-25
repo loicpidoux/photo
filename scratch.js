@@ -53,6 +53,25 @@ deltaCanvas.width = REF_W;
 deltaCanvas.height = REF_H;
 const deltaCtx = deltaCanvas.getContext('2d');
 
+function fetchScratchImage(pageName, type) {
+  return fetch('/scratch?page=' + encodeURIComponent(pageName) + '&type=' + type)
+    .then(res => {
+      if (res.status !== 200) return null;
+      return res.blob();
+    })
+    .then(blob => {
+      if (!blob || blob.size === 0) return null;
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => { resolve(img); URL.revokeObjectURL(url); };
+        img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+        img.src = url;
+      });
+    })
+    .catch(() => null);
+}
+
 function loadScratchPage(pageName) {
   scratchCtx.clearRect(0, 0, REF_W, REF_H);
   deltaCtx.clearRect(0, 0, REF_W, REF_H);
@@ -61,41 +80,42 @@ function loadScratchPage(pageName) {
     scratchPageLoadedResolve = resolve;
   });
 
-  fetch('/scratch?page=' + encodeURIComponent(pageName))
-    .then(res => res.json())
-    .then(({ main, delta }) => {
-      const loads = [];
-      if (main) {
-        loads.push(new Promise((res) => {
-          const img = new Image();
-          img.onload = () => { scratchCtx.drawImage(img, 0, 0); res(); };
-          img.onerror = () => res();
-          img.src = main;
-        }));
-      }
-      if (delta) {
-        loads.push(new Promise((res) => {
-          const img = new Image();
-          img.onload = () => {
-            scratchCtx.globalCompositeOperation = 'lighter';
-            scratchCtx.drawImage(img, 0, 0);
-            deltaCtx.globalCompositeOperation = 'lighter';
-            deltaCtx.drawImage(img, 0, 0);
-            hasUnsavedScratchChanges = true;
-            hasUnsavedDelta = true;
-            res();
-          };
-          img.onerror = () => res();
-          img.src = delta;
-        }));
-      }
-      Promise.all(loads).then(() => {
-        if (scratchPageLoadedResolve) scratchPageLoadedResolve();
-      });
-    })
-    .catch(() => {
-      if (scratchPageLoadedResolve) scratchPageLoadedResolve();
-    });
+  fetchScratchImage(pageName, 'main').then(mainImg => {
+    if (mainImg) {
+      scratchCtx.globalCompositeOperation = 'source-over';
+      scratchCtx.drawImage(mainImg, 0, 0);
+    }
+    return fetchScratchImage(pageName, 'delta');
+  }).then(deltaImg => {
+    if (deltaImg) {
+      scratchCtx.globalCompositeOperation = 'lighter';
+      scratchCtx.drawImage(deltaImg, 0, 0);
+      deltaCtx.globalCompositeOperation = 'lighter';
+      deltaCtx.drawImage(deltaImg, 0, 0);
+      hasUnsavedScratchChanges = true;
+      hasUnsavedDelta = true;
+    }
+    if (scratchPageLoadedResolve) scratchPageLoadedResolve();
+  }).catch(() => {
+    if (scratchPageLoadedResolve) scratchPageLoadedResolve();
+  });
+}
+
+function postScratchBlob(pageName, type, canvasEl, keepalive) {
+  return new Promise((resolve) => {
+    canvasEl.toBlob((blob) => {
+      if (!blob) { resolve(); return; }
+      const opts = {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/png' },
+        body: blob
+      };
+      if (keepalive) opts.keepalive = true;
+      fetch('/scratch?page=' + encodeURIComponent(pageName) + '&type=' + type, opts)
+        .catch(() => {})
+        .finally(resolve);
+    }, 'image/png');
+  });
 }
 
 function saveScratchPageNow(pageName) {
@@ -104,29 +124,10 @@ function saveScratchPageNow(pageName) {
   const promises = [];
 
   if (savedMain) {
-    try {
-      const dataUrl = scratchCanvas.toDataURL('image/png');
-      promises.push(
-        fetch('/scratch', {
-          method: 'POST',
-          body: JSON.stringify({ type: 'main', page: pageName, dataUrl }),
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(() => {})
-      );
-    } catch (e) {}
+    promises.push(postScratchBlob(pageName, 'main', scratchCanvas, false));
   }
   if (savedDelta) {
-    try {
-      const dataUrl = deltaCanvas.toDataURL('image/png');
-      promises.push(
-        fetch('/scratch', {
-          method: 'POST',
-          body: JSON.stringify({ type: 'delta', page: pageName, dataUrl }),
-          headers: { 'Content-Type': 'application/json' },
-          keepalive: true
-        }).catch(() => {})
-      );
-    } catch (e) {}
+    promises.push(postScratchBlob(pageName, 'delta', deltaCanvas, true));
   }
 
   hasUnsavedScratchChanges = false;
