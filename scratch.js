@@ -37,7 +37,6 @@ let currentScratchPage = 'home';
 let scratchTransitionInProgress = false;
 let scratchPendingNextPage = null;
 let scratchTransitionPromise = null;
-let scratchLoadGeneration = 0;
 let scratchPageLoadedResolve = null;
 let scratchPageLoadedPromise = null;
 
@@ -74,9 +73,6 @@ function fetchScratchImage(pageName, type) {
 }
 
 function loadScratchPage(pageName) {
-  scratchLoadGeneration++;
-  const myGeneration = scratchLoadGeneration;
-
   scratchCtx.clearRect(0, 0, REF_W, REF_H);
   deltaCtx.clearRect(0, 0, REF_W, REF_H);
 
@@ -85,14 +81,12 @@ function loadScratchPage(pageName) {
   });
 
   fetchScratchImage(pageName, 'main').then(mainImg => {
-    if (myGeneration !== scratchLoadGeneration) return null;
     if (mainImg) {
       scratchCtx.globalCompositeOperation = 'source-over';
       scratchCtx.drawImage(mainImg, 0, 0);
     }
     return fetchScratchImage(pageName, 'delta');
   }).then(deltaImg => {
-    if (myGeneration !== scratchLoadGeneration) return;
     if (deltaImg) {
       scratchCtx.globalCompositeOperation = 'lighter';
       scratchCtx.drawImage(deltaImg, 0, 0);
@@ -103,7 +97,7 @@ function loadScratchPage(pageName) {
     }
     if (scratchPageLoadedResolve) scratchPageLoadedResolve();
   }).catch(() => {
-    if (myGeneration === scratchLoadGeneration && scratchPageLoadedResolve) scratchPageLoadedResolve();
+    if (scratchPageLoadedResolve) scratchPageLoadedResolve();
   });
 }
 
@@ -222,17 +216,84 @@ let hasUnsavedDelta = false;
 
 const pendingStrokes = [];
 
+// --- Tramage organique : dessine un segment dans un canvas donné, en sautant
+// aléatoirement une partie des pixels (0% à 100%, propre à CHAQUE trait) et en
+// compensant la luminosité des pixels survivants. Une légère ondulation fait
+// varier ce pourcentage tout au long du trait, pour éviter un rendu trop uniforme.
+const SCRATCH_WOBBLE_AMPLITUDE = 0.12;
+const SCRATCH_WOBBLE_FREQUENCY = 11;
+const SCRATCH_MAX_COMPENSATION = 4;
+
+function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed) {
+  const canvasW = ctx.canvas.width;
+  const canvasH = ctx.canvas.height;
+  if (canvasW <= 0 || canvasH <= 0) return;
+
+  const tmp = document.createElement('canvas');
+  tmp.width = canvasW;
+  tmp.height = canvasH;
+  const tctx = tmp.getContext('2d');
+  tctx.strokeStyle = `rgba(255,255,255,${opacity})`;
+  tctx.lineWidth = SCRATCH_LINE_WIDTH;
+  tctx.lineCap = 'round';
+  tctx.beginPath();
+  tctx.moveTo(x1, y1);
+  tctx.lineTo(x2, y2);
+  tctx.stroke();
+
+  const imgData = tctx.getImageData(0, 0, canvasW, canvasH);
+  const data = imgData.data;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = (dx * dx + dy * dy) || 1;
+
+  for (let py = 0; py < canvasH; py++) {
+    for (let px = 0; px < canvasW; px++) {
+      const idx = (py * canvasW + px) * 4 + 3;
+      if (data[idx] === 0) continue;
+
+      const relX = px - x1;
+      const relY = py - y1;
+      const t = (relX * dx + relY * dy) / lenSq;
+      const wobble = Math.sin(t * SCRATCH_WOBBLE_FREQUENCY + wobbleSeed) * SCRATCH_WOBBLE_AMPLITUDE;
+      const localSkip = Math.min(Math.max(skipPct + wobble, 0), 0.97);
+
+      if (Math.random() < localSkip) {
+        data[idx] = 0;
+      } else {
+        const compensation = Math.min(1 / (1 - localSkip), SCRATCH_MAX_COMPENSATION);
+        data[idx] = Math.min(255, data[idx] * compensation);
+      }
+    }
+  }
+  tctx.putImageData(imgData, 0, 0);
+  ctx.drawImage(tmp, 0, 0);
+}
+
 function bakeStroke(stroke) {
+  const pad = SCRATCH_LINE_WIDTH / 2 + 1;
+  const minX = Math.floor(Math.min(stroke.x1, stroke.x2) - pad);
+  const minY = Math.floor(Math.min(stroke.y1, stroke.y2) - pad);
+  const maxX = Math.ceil(Math.max(stroke.x1, stroke.x2) + pad);
+  const maxY = Math.ceil(Math.max(stroke.y1, stroke.y2) + pad);
+  const bw = Math.max(maxX - minX, 1);
+  const bh = Math.max(maxY - minY, 1);
+
+  const tmp = document.createElement('canvas');
+  tmp.width = bw;
+  tmp.height = bh;
+  const tctx = tmp.getContext('2d');
+  drawDitheredLine(
+    tctx,
+    stroke.x1 - minX, stroke.y1 - minY, stroke.x2 - minX, stroke.y2 - minY,
+    stroke.targetOpacity, stroke.skipPct, stroke.wobbleSeed
+  );
+
   [scratchCtx, deltaCtx].forEach(ctx => {
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = `rgba(255,255,255,${stroke.targetOpacity})`;
-    ctx.lineWidth = SCRATCH_LINE_WIDTH;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(stroke.x1, stroke.y1);
-    ctx.lineTo(stroke.x2, stroke.y2);
-    ctx.stroke();
+    ctx.drawImage(tmp, minX, minY);
   });
+
   hasUnsavedScratchChanges = true;
   hasUnsavedDelta = true;
 }
@@ -249,6 +310,12 @@ function bakeAllPending() {
 }
 
 function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs) {
+  // Tirés une seule fois, dès la naissance du trait : le même % de saut et la même
+  // ondulation serviront à la fois pour l'aperçu (ci-dessous) et pour le résultat
+  // figé (bakeStroke) - le style ne change donc pas quand le trait se fige.
+  const skipPct = Math.random();
+  const wobbleSeed = Math.random() * Math.PI * 2;
+
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
   const minX = Math.min(screenX1, screenX2) - pad;
   const minY = Math.min(screenY1, screenY2) - pad;
@@ -270,13 +337,11 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
   document.body.appendChild(mini);
 
   const mctx = mini.getContext('2d');
-  mctx.strokeStyle = `rgba(255,255,255,${targetOpacity})`;
-  mctx.lineWidth = SCRATCH_LINE_WIDTH;
-  mctx.lineCap = 'round';
-  mctx.beginPath();
-  mctx.moveTo(screenX1 - minX, screenY1 - minY);
-  mctx.lineTo(screenX2 - minX, screenY2 - minY);
-  mctx.stroke();
+  drawDitheredLine(
+    mctx,
+    screenX1 - minX, screenY1 - minY, screenX2 - minX, screenY2 - minY,
+    targetOpacity, skipPct, wobbleSeed
+  );
 
   if (fadeMs > 0) {
     requestAnimationFrame(() => {
@@ -284,7 +349,10 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
     });
   }
 
-  const strokeRecord = { x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini };
+  const strokeRecord = {
+    x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini,
+    skipPct, wobbleSeed
+  };
 
   strokeRecord.timeoutId = setTimeout(() => {
     bakeStroke(strokeRecord);
