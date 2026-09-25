@@ -25,15 +25,28 @@
   </div>
 
   <main class="viewer" id="viewer" style="display:none;">
-    <a href="#" class="close-btn" id="closeBtn">✕</a>
-    <button class="nav-arrow nav-prev" id="prevBtn" aria-label="Image précédente">‹</button>
+    <a href="#" class="close-btn" id="closeBtn">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 6 18"/>
+    <path d="m6 6 12 12"/>
+  </svg>
+</a>
+    <button class="nav-arrow nav-prev" id="prevBtn" aria-label="Image précédente">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m15 18-6-6 6-6"/>
+  </svg>
+</button>
     <div class="image-container">
   <div class="image-track" id="imageTrack">
     <img id="mainImage" src="" alt="">
     <img id="mainImageIncoming" src="" alt="" style="display:none;">
   </div>
 </div>
-    <button class="nav-arrow nav-next" id="nextBtn" aria-label="Image suivante">›</button>
+    <button class="nav-arrow nav-next" id="nextBtn" aria-label="Image suivante">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 18 6-6-6-6"/>
+  </svg>
+</button>
  <button class="gallery-btn" id="galleryBtn" style="display:none;">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9 14 4 9l5-5"/>
@@ -43,7 +56,12 @@
   </main>
 
   <div class="grid-view" id="gridView" style="display:none;">
-    <a href="#" class="close-btn" id="closeBtnGrid">✕</a>
+    <a href="#" class="close-btn" id="closeBtnGrid">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 6 18"/>
+    <path d="m6 6 12 12"/>
+  </svg>
+</a>
     <div class="grid-container" id="gridContainer">
       <div class="grid-inner" id="gridInner"></div>
     </div>
