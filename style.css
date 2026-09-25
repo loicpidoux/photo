@@ -165,6 +165,9 @@ body.viewing-serie .footer-links-desktop {
   opacity: 0;
   pointer-events: none;
 }
+.viewer.controls-hidden {
+  cursor: none;
+}
 @media (max-width: 600px) {
   .nav-arrow {
     display: none;
