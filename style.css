@@ -138,6 +138,11 @@ body.viewing-serie .footer-links-desktop {
   position: fixed;
   top: 32px;
   right: 48px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 22px;
   color: #1a1a1a;
   text-decoration: none;
@@ -148,17 +153,22 @@ body.viewing-serie .footer-links-desktop {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 40px;
+  font-size: 26px;
   color: #1a1a1a;
   cursor: pointer;
   z-index: 2;
-  padding: 20px;
+  padding: 0;
   transition: opacity 0.3s ease;
 }
-.nav-prev { left: 12px; }
-.nav-next { right: 12px; }
+.nav-prev { left: 24px; }
+.nav-next { right: 24px; }
 .controls-hidden .close-btn,
 .controls-hidden .nav-arrow,
 .controls-hidden .gallery-btn {
@@ -177,8 +187,11 @@ body.viewing-serie .footer-links-desktop {
   position: fixed;
   bottom: 32px;
   right: 48px;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
+  font-size: 22px;
   color: #1a1a1a;
   cursor: pointer;
   z-index: 2;
