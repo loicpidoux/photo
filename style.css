@@ -12,7 +12,7 @@ html, body {
 }
 body {
   font-family: 'Consolas', monospace;
-  color: #1a1a1a;
+  color: #000000;
   position: relative;
 }
 body::before {
@@ -68,7 +68,7 @@ body::before {
 }
 
 .serie-link {
-  color: #1a1a1a;
+  color: #000000;
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.2s ease;
