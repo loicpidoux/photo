@@ -162,11 +162,9 @@ function showImage(index, direction) {
     mainImage.style.transform = 'translateX(0)';
   }
 
-  updateArrows();
+    updateArrows();
   galleryBtn.style.display = hasSeenGrid ? 'block' : 'none';
-  if (index === 0) {
-    preloadRemaining(0);
-  }
+  preloadNext(index);
 }
 
 function computeGridLayout(n, containerW, containerH, gap) {
@@ -269,10 +267,11 @@ function updateArrows() {
   nextBtn.style.visibility = 'visible';
 }
 
-function preloadRemaining(fromIndex) {
-  for (let i = fromIndex + 1; i < images.length; i++) {
+function preloadNext(fromIndex) {
+  const nextIndex = fromIndex + 1;
+  if (nextIndex < images.length) {
     const img = new Image();
-    img.src = images[i];
+    img.src = images[nextIndex];
   }
 }
 
