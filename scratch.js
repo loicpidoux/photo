@@ -299,32 +299,6 @@ function randomTremorOffsets() {
   ];
 }
 
-// Accents occasionnels : un trait tres court a une petite chance d'etre
-// nettement plus lumineux ; un trait long a une chance beaucoup plus rare
-// d'avoir le meme traitement - pour ne jamais saturer le site de blanc.
-// A ajuster apres test reel.
-const SCRATCH_SHORT_ACCENT_MAX_DISTANCE = 250; // px ecran, ce qu'on considere "tres court"
-const SCRATCH_SHORT_ACCENT_CHANCE = 0.04;
-const SCRATCH_LONG_ACCENT_MIN_DISTANCE = 1000; // px ecran, ce qu'on considere "long"
-const SCRATCH_LONG_ACCENT_CHANCE = 0.004; // tres tres rare
-const SCRATCH_ACCENT_OPACITY_MIN = 0.15;
-const SCRATCH_ACCENT_OPACITY_MAX = 0.25;
-const SCRATCH_MAX_FINAL_OPACITY = 0.5; // garde-fou general
-
-function maybeApplyAccent(baseOpacity, distance) {
-  const accentOpacity = () => Math.min(
-    SCRATCH_ACCENT_OPACITY_MIN + Math.random() * (SCRATCH_ACCENT_OPACITY_MAX - SCRATCH_ACCENT_OPACITY_MIN),
-    SCRATCH_MAX_FINAL_OPACITY
-  );
-  if (distance <= SCRATCH_SHORT_ACCENT_MAX_DISTANCE && Math.random() < SCRATCH_SHORT_ACCENT_CHANCE) {
-    return accentOpacity();
-  }
-  if (distance >= SCRATCH_LONG_ACCENT_MIN_DISTANCE && Math.random() < SCRATCH_LONG_ACCENT_CHANCE) {
-    return accentOpacity();
-  }
-  return baseOpacity;
-}
-
 // Dessine directement le trait sur le contexte donne (aucune lecture de pixel,
 // aucun canvas intermediaire) - une seule ligne stroke() suffit.
 // scaleFactor : 1 pour le canvas de reference (resultat fige), ou
@@ -486,10 +460,6 @@ function processScratchPoint(screenX, screenY) {
     }
 
     if (shouldDraw && targetOpacity !== null) {
-      const distance = Math.hypot(screenX - scratchLastScreenX, screenY - scratchLastScreenY);
-
-      const finalOpacity = maybeApplyAccent(targetOpacity, distance);
-
       const skipPct = randomSkipPct();
       const dashPattern = buildDashPattern(skipPct);
       const taperFraction = randomTaperFraction();
@@ -498,7 +468,7 @@ function processScratchPoint(screenX, screenY) {
       spawnFadingStroke(
         scratchLastScreenX, scratchLastScreenY, screenX, screenY,
         scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-        finalOpacity, fadeMs, dashPattern, taperFraction, tremorOffsets
+        targetOpacity, fadeMs, dashPattern, taperFraction, tremorOffsets
       );
     }
   }
