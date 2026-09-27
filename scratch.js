@@ -253,18 +253,21 @@ function randomSkipPct() {
   return Math.min(Math.max(base + jitter, SCRATCH_SKIP_MIN), SCRATCH_SKIP_MAX);
 }
 
-// Vitesse -> OPACITE (et non plus les trous) : sous SCRATCH_SPEED_LOW (px/ms),
-// le trait est un peu plus pâle (x0.7) ; au-dessus de SCRATCH_SPEED_HIGH, un peu
-// plus visible (x1.6). A ajuster apres test reel.
-const SCRATCH_SPEED_LOW = 0.03;
-const SCRATCH_SPEED_HIGH = 1.2;
-const SCRATCH_SPEED_OPACITY_LOW = 0.7;
-const SCRATCH_SPEED_OPACITY_HIGH = 1.6;
-const SCRATCH_MAX_FINAL_OPACITY = 0.5; // plafond de securite, evite un trait "brule" apres cumul des multiplicateurs
+// Vitesse -> OPACITE occasionnelle : un mouvement RAPIDE ET AMPLE a une chance
+// (pas systematique) de doubler l'opacite du trait - pas un effet continu et
+// discret, un vrai "coup d'accent" ponctuel. A ajuster apres test reel.
+const SCRATCH_FAST_MOVE_MIN_DISTANCE = 40; // px, ce qui compte comme un geste "assez grand"
+const SCRATCH_FAST_MOVE_MIN_SPEED = 1.0; // px/ms, ce qui compte comme "tres rapide"
+const SCRATCH_FAST_MOVE_BOOST_CHANCE = 0.35; // "occasionnellement"
+const SCRATCH_FAST_MOVE_OPACITY_MULT = 2.0; // "le double"
+const SCRATCH_MAX_FINAL_OPACITY = 0.5; // plafond de securite, evite un trait "brule"
 
-function opacityMultiplierFromSpeed(speed) {
-  const t = Math.min(Math.max((speed - SCRATCH_SPEED_LOW) / (SCRATCH_SPEED_HIGH - SCRATCH_SPEED_LOW), 0), 1);
-  return SCRATCH_SPEED_OPACITY_LOW + t * (SCRATCH_SPEED_OPACITY_HIGH - SCRATCH_SPEED_OPACITY_LOW);
+function maybeApplySpeedBoost(baseOpacity, distance, speed) {
+  const eligible = distance >= SCRATCH_FAST_MOVE_MIN_DISTANCE && speed >= SCRATCH_FAST_MOVE_MIN_SPEED;
+  if (eligible && Math.random() < SCRATCH_FAST_MOVE_BOOST_CHANCE) {
+    return Math.min(baseOpacity * SCRATCH_FAST_MOVE_OPACITY_MULT, SCRATCH_MAX_FINAL_OPACITY);
+  }
+  return baseOpacity;
 }
 
 // Estompage aux extremites (F) : chaque trait a sa propre proportion, tiree au
@@ -290,16 +293,41 @@ function randomTremorOffsets() {
 }
 
 // Grain moins "bruit blanc" : au lieu de decider chaque pixel independamment,
-// on decide par petits GROUPES de pixels consecutifs le long du trait (1 a
-// SCRATCH_CLUSTER_MAX_RUN pixels a la fois) - plus proche d'une vraie texture
-// de mine de crayon que d'un bruit numerique uniforme.
-const SCRATCH_CLUSTER_MAX_RUN = 4;
+// on decide par petits GROUPES le long du trait (plus proche d'une vraie
+// texture de mine de crayon que d'un bruit numerique uniforme). CRUCIAL : ce
+// "programme" de groupes est calcule en coordonnees RELATIVES (0 a 1 le long du
+// trait), donc independant de la resolution - il peut etre calcule UNE SEULE
+// FOIS par trait et reutilise a l'identique pour l'apercu ET le resultat fige,
+// ce qui elimine le glitch (aucun re-tirage au hasard entre les deux).
+const SCRATCH_CLUSTER_MIN_T = 0.04; // fraction de la longueur du trait
+const SCRATCH_CLUSTER_MAX_T = 0.18;
+const SCRATCH_BRIGHTNESS_NOISE = 0.3; // +/- 15%, tire une fois par groupe
 
-// Petit bruit aleatoire sur la luminosite de chaque pixel survivant (en plus
-// de la compensation), pour eviter des zones a luminosite parfaitement identique.
-const SCRATCH_BRIGHTNESS_NOISE = 0.3; // +/- 15%
+function buildDitherSchedule(skipPct, wobbleSeed) {
+  const schedule = [];
+  let t = 0;
+  while (t < 1) {
+    const runLenT = SCRATCH_CLUSTER_MIN_T + Math.random() * (SCRATCH_CLUSTER_MAX_T - SCRATCH_CLUSTER_MIN_T);
+    const tEnd = Math.min(t + runLenT, 1);
+    const wobble = Math.sin(t * SCRATCH_WOBBLE_FREQUENCY + wobbleSeed) * SCRATCH_WOBBLE_AMPLITUDE;
+    const localSkip = Math.min(Math.max(skipPct + wobble, 0), 0.97);
+    const skip = Math.random() < localSkip;
+    const compensation = Math.min(1 / (1 - localSkip), SCRATCH_MAX_COMPENSATION);
+    const brightnessNoise = 1 + (Math.random() - 0.5) * SCRATCH_BRIGHTNESS_NOISE;
+    schedule.push({ tStart: t, tEnd, skip, compensation, brightnessNoise });
+    t = tEnd;
+  }
+  return schedule;
+}
 
-function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed, taperFraction, tremorOffsets) {
+function findScheduleEntry(schedule, t) {
+  for (let s = 0; s < schedule.length; s++) {
+    if (t >= schedule[s].tStart && t <= schedule[s].tEnd) return schedule[s];
+  }
+  return schedule[schedule.length - 1]; // secours pour un t legerement hors [0,1] (bord de la courbe)
+}
+
+function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, schedule, taperFraction, tremorOffsets) {
   const canvasW = ctx.canvas.width;
   const canvasH = ctx.canvas.height;
   if (canvasW <= 0 || canvasH <= 0) return;
@@ -333,9 +361,10 @@ function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed, tap
   const data = imgData.data;
   const lenSq = (dx * dx + dy * dy) || 1;
 
-  // 1) Repertorier les pixels dessines, avec leur position approximative le
-  // long du trait (t) et leur facteur d'estompage (F).
-  const samples = [];
+  // Le "programme" de trous (schedule) a ete calcule UNE SEULE FOIS par trait,
+  // avant meme cet appel - on ne fait ici QUE le lire et l'appliquer, jamais de
+  // nouveau tirage au hasard. C'est ce qui garantit que l'apercu et le resultat
+  // fige se ressemblent exactement (plus de glitch au moment de figer le trait).
   for (let py = 0; py < canvasH; py++) {
     for (let px = 0; px < canvasW; px++) {
       const idx = (py * canvasW + px) * 4 + 3;
@@ -357,31 +386,11 @@ function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed, tap
       }
       if (taperMul <= 0) { data[idx] = 0; continue; }
 
-      samples.push({ idx, t, taperMul });
-    }
-  }
-
-  // 2) Trie le long du trait, puis decide les trous par PETITS GROUPES de
-  // pixels consecutifs (grain moins "bruit blanc"), chaque groupe utilisant le
-  // pourcentage local (ondulation D comprise) evalue a son point de depart.
-  samples.sort((a, b) => a.t - b.t);
-
-  let i = 0;
-  while (i < samples.length) {
-    const runLen = 1 + Math.floor(Math.random() * SCRATCH_CLUSTER_MAX_RUN);
-    const startT = samples[i].t;
-    const wobble = Math.sin(startT * SCRATCH_WOBBLE_FREQUENCY + wobbleSeed) * SCRATCH_WOBBLE_AMPLITUDE;
-    const localSkip = Math.min(Math.max(skipPct + wobble, 0), 0.97);
-    const skipThisRun = Math.random() < localSkip;
-    const compensation = Math.min(1 / (1 - localSkip), SCRATCH_MAX_COMPENSATION);
-
-    for (let k = 0; k < runLen && i < samples.length; k++, i++) {
-      const sample = samples[i];
-      if (skipThisRun) {
-        data[sample.idx] = 0;
+      const entry = findScheduleEntry(schedule, Math.min(Math.max(t, 0), 1));
+      if (entry.skip) {
+        data[idx] = 0;
       } else {
-        const brightnessNoise = 1 + (Math.random() - 0.5) * SCRATCH_BRIGHTNESS_NOISE;
-        data[sample.idx] = Math.min(255, data[sample.idx] * sample.taperMul * compensation * brightnessNoise);
+        data[idx] = Math.min(255, data[idx] * taperMul * entry.compensation * entry.brightnessNoise);
       }
     }
   }
@@ -406,7 +415,7 @@ function bakeStroke(stroke) {
   drawDitheredLine(
     tctx,
     stroke.x1 - minX, stroke.y1 - minY, stroke.x2 - minX, stroke.y2 - minY,
-    stroke.targetOpacity, stroke.skipPct, stroke.wobbleSeed, stroke.taperFraction, stroke.tremorOffsets
+    stroke.targetOpacity, stroke.schedule, stroke.taperFraction, stroke.tremorOffsets
   );
 
   [scratchCtx, deltaCtx].forEach(ctx => {
@@ -429,15 +438,16 @@ function bakeAllPending() {
   }
 }
 
-function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, skipPct, taperFraction, tremorOffsets) {
-  // skipPct, taperFraction et tremorOffsets sont calcules par l'appelant (voir
-  // processScratchPoint) - tires une seule fois, des la naissance du trait : les
+function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, schedule, taperFraction, tremorOffsets) {
+  // schedule, taperFraction et tremorOffsets sont calcules par l'appelant (voir
+  // processScratchPoint) - une seule fois, des la naissance du trait : les
   // memes valeurs serviront a la fois pour l'apercu (ci-dessous) et pour le
   // resultat fige (bakeStroke) - le style ne change donc pas quand le trait se
-  // fige. Note : le tremblement (tremorOffsets) est exprime en pixels et reutilise
-  // tel quel sur les deux canvas, meme si leurs echelles (ecran vs reference)
-  // different legerement - meme limite que pour le grain du tramage.
-  const wobbleSeed = Math.random() * Math.PI * 2;
+  // fige, et le "programme" de trous (schedule) etant deja entierement decide
+  // a l'avance, il n'y a plus de nouveau tirage au hasard entre les deux (donc
+  // plus de glitch). Note : le tremblement (tremorOffsets) est exprime en
+  // pixels et reutilise tel quel sur les deux canvas, meme si leurs echelles
+  // (ecran vs reference) different legerement - limite residuelle mineure.
 
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
   const minX = Math.min(screenX1, screenX2) - pad;
@@ -463,7 +473,7 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
   drawDitheredLine(
     mctx,
     screenX1 - minX, screenY1 - minY, screenX2 - minX, screenY2 - minY,
-    targetOpacity, skipPct, wobbleSeed, taperFraction, tremorOffsets
+    targetOpacity, schedule, taperFraction, tremorOffsets
   );
 
   if (fadeMs > 0) {
@@ -474,7 +484,7 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
 
   const strokeRecord = {
     x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini,
-    skipPct, wobbleSeed, taperFraction, tremorOffsets
+    schedule, taperFraction, tremorOffsets
   };
 
   strokeRecord.timeoutId = setTimeout(() => {
@@ -528,17 +538,18 @@ function processScratchPoint(screenX, screenY) {
       const dt = Math.max(inactivityGap || 1, 1); // ms, protege contre une division par ~0
       const speed = distance / dt; // px/ms
 
-      const opacityMul = opacityMultiplierFromSpeed(speed);
-      const finalOpacity = Math.min(targetOpacity * opacityMul, SCRATCH_MAX_FINAL_OPACITY);
+      const finalOpacity = maybeApplySpeedBoost(targetOpacity, distance, speed);
 
       const skipPct = randomSkipPct();
+      const wobbleSeed = Math.random() * Math.PI * 2;
+      const schedule = buildDitherSchedule(skipPct, wobbleSeed);
       const taperFraction = randomTaperFraction();
       const tremorOffsets = randomTremorOffsets();
 
       spawnFadingStroke(
         scratchLastScreenX, scratchLastScreenY, screenX, screenY,
         scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-        finalOpacity, fadeMs, skipPct, taperFraction, tremorOffsets
+        finalOpacity, fadeMs, schedule, taperFraction, tremorOffsets
       );
     }
   }
