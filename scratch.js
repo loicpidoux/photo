@@ -303,12 +303,12 @@ function randomTremorOffsets() {
 // nettement plus lumineux ; un trait long a une chance beaucoup plus rare
 // d'avoir le meme traitement - pour ne jamais saturer le site de blanc.
 // A ajuster apres test reel.
-const SCRATCH_SHORT_ACCENT_MAX_DISTANCE = 12; // px ecran, ce qu'on considere "tres court"
+const SCRATCH_SHORT_ACCENT_MAX_DISTANCE = 250; // px ecran, ce qu'on considere "tres court"
 const SCRATCH_SHORT_ACCENT_CHANCE = 0.04;
-const SCRATCH_LONG_ACCENT_MIN_DISTANCE = 80; // px ecran, ce qu'on considere "long"
+const SCRATCH_LONG_ACCENT_MIN_DISTANCE = 1000; // px ecran, ce qu'on considere "long"
 const SCRATCH_LONG_ACCENT_CHANCE = 0.004; // tres tres rare
-const SCRATCH_ACCENT_OPACITY_MIN = 0.25;
-const SCRATCH_ACCENT_OPACITY_MAX = 0.35;
+const SCRATCH_ACCENT_OPACITY_MIN = 0.15;
+const SCRATCH_ACCENT_OPACITY_MAX = 0.25;
 const SCRATCH_MAX_FINAL_OPACITY = 0.5; // garde-fou general
 
 function maybeApplyAccent(baseOpacity, distance) {
