@@ -228,33 +228,70 @@ let hasUnsavedDelta = false;
 const pendingStrokes = [];
 
 // --- Tramage organique : dessine un segment dans un canvas donné, en sautant
-// aléatoirement une partie des pixels (0% à 100%, propre à CHAQUE trait) et en
-// compensant la luminosité des pixels survivants. Une légère ondulation fait
-// varier ce pourcentage tout au long du trait, pour éviter un rendu trop uniforme.
+// aléatoirement une partie des pixels (propre à CHAQUE trait) et en compensant
+// la luminosité des pixels survivants. Une légère ondulation fait varier ce
+// pourcentage tout au long du trait, pour éviter un rendu trop uniforme.
 const SCRATCH_WOBBLE_AMPLITUDE = 0.12;
 const SCRATCH_WOBBLE_FREQUENCY = 11;
 const SCRATCH_MAX_COMPENSATION = 4;
 
-// Correlation vitesse -> % de saut : sous SCRATCH_SPEED_LOW (px/ms), on est au
-// pourcentage le plus eleve (trait tres pointille) ; au-dessus de SCRATCH_SPEED_HIGH,
-// au pourcentage le plus bas (trait presque plein). A ajuster apres test reel.
-const SCRATCH_SPEED_LOW = 0.03;
-const SCRATCH_SPEED_HIGH = 1.2;
-const SCRATCH_SKIP_AT_SLOW = 0.92;
-const SCRATCH_SKIP_AT_FAST = 0.05;
-const SCRATCH_SPEED_JITTER = 0.2; // variation aleatoire ajoutee par-dessus, pour rester organique
+// % de trous : tire au hasard entre 1% et 25% pour CHAQUE trait, independant de
+// la vitesse (decision explicite : la vitesse ne controle plus les trous, voir
+// plus bas). Un petit +/-10% est ajoute par-dessus, puis le resultat est
+// replafonne dans la fourchette 1%-25% pour ne jamais la depasser.
+const SCRATCH_SKIP_MIN = 0.01;
+const SCRATCH_SKIP_MAX = 0.25;
+const SCRATCH_SKIP_JITTER = 0.2; // +/- 10 points de pourcentage
 
-function skipPctFromSpeed(speed) {
-  const t = Math.min(Math.max((speed - SCRATCH_SPEED_LOW) / (SCRATCH_SPEED_HIGH - SCRATCH_SPEED_LOW), 0), 1);
-  const base = SCRATCH_SKIP_AT_SLOW - t * (SCRATCH_SKIP_AT_SLOW - SCRATCH_SKIP_AT_FAST);
-  const jitter = (Math.random() - 0.5) * SCRATCH_SPEED_JITTER;
-  return Math.min(Math.max(base + jitter, 0), 1);
+function randomSkipPct() {
+  const base = SCRATCH_SKIP_MIN + Math.random() * (SCRATCH_SKIP_MAX - SCRATCH_SKIP_MIN);
+  const jitter = (Math.random() - 0.5) * SCRATCH_SKIP_JITTER;
+  return Math.min(Math.max(base + jitter, SCRATCH_SKIP_MIN), SCRATCH_SKIP_MAX);
 }
 
-function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed) {
+// Vitesse -> OPACITE (et non plus les trous) : sous SCRATCH_SPEED_LOW (px/ms),
+// le trait est un peu plus pâle (x0.7) ; au-dessus de SCRATCH_SPEED_HIGH, un peu
+// plus visible (x1.6). A ajuster apres test reel.
+const SCRATCH_SPEED_LOW = 0.03;
+const SCRATCH_SPEED_HIGH = 1.2;
+const SCRATCH_SPEED_OPACITY_LOW = 0.7;
+const SCRATCH_SPEED_OPACITY_HIGH = 1.6;
+const SCRATCH_MAX_FINAL_OPACITY = 0.5; // plafond de securite, evite un trait "brule" apres cumul des multiplicateurs
+
+function opacityMultiplierFromSpeed(speed) {
+  const t = Math.min(Math.max((speed - SCRATCH_SPEED_LOW) / (SCRATCH_SPEED_HIGH - SCRATCH_SPEED_LOW), 0), 1);
+  return SCRATCH_SPEED_OPACITY_LOW + t * (SCRATCH_SPEED_OPACITY_HIGH - SCRATCH_SPEED_OPACITY_LOW);
+}
+
+// Estompage aux extremites (F) : chaque trait a sa propre proportion, tiree au
+// hasard entre 0% (pas d'estompage) et 20% (estompage marque) de sa longueur,
+// a chaque bout.
+const SCRATCH_TAPER_MAX_FRACTION = 0.20;
+
+function randomTaperFraction() {
+  return Math.random() * SCRATCH_TAPER_MAX_FRACTION;
+}
+
+// Tremblement de la ligne elle-meme (G) : un unique point de controle au milieu
+// du trait, decale perpendiculairement de +/- SCRATCH_TREMOR_MAX_PX pixels.
+const SCRATCH_TREMOR_MAX_PX = 4;
+
+function randomTremorOffset() {
+  return (Math.random() * 2 - 1) * SCRATCH_TREMOR_MAX_PX;
+}
+
+function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed, taperFraction, tremorOffset) {
   const canvasW = ctx.canvas.width;
   const canvasH = ctx.canvas.height;
   if (canvasW <= 0 || canvasH <= 0) return;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const perpX = -dy / len;
+  const perpY = dx / len;
+  const midX = (x1 + x2) / 2 + perpX * tremorOffset;
+  const midY = (y1 + y2) / 2 + perpY * tremorOffset;
 
   const tmp = document.createElement('canvas');
   tmp.width = canvasW;
@@ -265,13 +302,13 @@ function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed) {
   tctx.lineCap = 'round';
   tctx.beginPath();
   tctx.moveTo(x1, y1);
-  tctx.lineTo(x2, y2);
+  // Une legere courbe (via le point de controle decale perpendiculairement)
+  // plutot qu'une ligne parfaitement droite - c'est le tremblement (G).
+  tctx.quadraticCurveTo(midX, midY, x2, y2);
   tctx.stroke();
 
   const imgData = tctx.getImageData(0, 0, canvasW, canvasH);
   const data = imgData.data;
-  const dx = x2 - x1;
-  const dy = y2 - y1;
   const lenSq = (dx * dx + dy * dy) || 1;
 
   for (let py = 0; py < canvasH; py++) {
@@ -281,7 +318,22 @@ function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed) {
 
       const relX = px - x1;
       const relY = py - y1;
+      // t = position approximative le long du trait (0 = debut, 1 = fin) ;
+      // reste une approximation meme avec la courbe (l'ecart max est de
+      // quelques pixels, negligeable pour ce calcul).
       const t = (relX * dx + relY * dy) / lenSq;
+
+      // Estompage aux deux extremites (F)
+      let taperMul = 1;
+      if (taperFraction > 0) {
+        if (t < taperFraction) {
+          taperMul = Math.max(t, 0) / taperFraction;
+        } else if (t > 1 - taperFraction) {
+          taperMul = Math.max(1 - t, 0) / taperFraction;
+        }
+      }
+      if (taperMul <= 0) { data[idx] = 0; continue; }
+
       const wobble = Math.sin(t * SCRATCH_WOBBLE_FREQUENCY + wobbleSeed) * SCRATCH_WOBBLE_AMPLITUDE;
       const localSkip = Math.min(Math.max(skipPct + wobble, 0), 0.97);
 
@@ -289,7 +341,7 @@ function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, skipPct, wobbleSeed) {
         data[idx] = 0;
       } else {
         const compensation = Math.min(1 / (1 - localSkip), SCRATCH_MAX_COMPENSATION);
-        data[idx] = Math.min(255, data[idx] * compensation);
+        data[idx] = Math.min(255, data[idx] * taperMul * compensation);
       }
     }
   }
@@ -313,7 +365,7 @@ function bakeStroke(stroke) {
   drawDitheredLine(
     tctx,
     stroke.x1 - minX, stroke.y1 - minY, stroke.x2 - minX, stroke.y2 - minY,
-    stroke.targetOpacity, stroke.skipPct, stroke.wobbleSeed
+    stroke.targetOpacity, stroke.skipPct, stroke.wobbleSeed, stroke.taperFraction, stroke.tremorOffset
   );
 
   [scratchCtx, deltaCtx].forEach(ctx => {
@@ -336,12 +388,14 @@ function bakeAllPending() {
   }
 }
 
-function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, skipPct) {
-  // skipPct est calculé par l'appelant à partir de la vitesse du geste (voir
-  // processScratchPoint) - tiré une seule fois, dès la naissance du trait : le
-  // même % de saut et la même ondulation serviront à la fois pour l'aperçu
-  // (ci-dessous) et pour le résultat figé (bakeStroke) - le style ne change donc
-  // pas quand le trait se fige.
+function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, skipPct, taperFraction, tremorOffset) {
+  // skipPct, taperFraction et tremorOffset sont calcules par l'appelant (voir
+  // processScratchPoint) - tires une seule fois, des la naissance du trait : les
+  // memes valeurs serviront a la fois pour l'apercu (ci-dessous) et pour le
+  // resultat fige (bakeStroke) - le style ne change donc pas quand le trait se
+  // fige. Note : le tremblement (tremorOffset) est exprime en pixels et reutilise
+  // tel quel sur les deux canvas, meme si leurs echelles (ecran vs reference)
+  // different legerement - meme limite que pour le grain du tramage.
   const wobbleSeed = Math.random() * Math.PI * 2;
 
   const pad = SCRATCH_LINE_WIDTH / 2 + 2;
@@ -368,7 +422,7 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
   drawDitheredLine(
     mctx,
     screenX1 - minX, screenY1 - minY, screenX2 - minX, screenY2 - minY,
-    targetOpacity, skipPct, wobbleSeed
+    targetOpacity, skipPct, wobbleSeed, taperFraction, tremorOffset
   );
 
   if (fadeMs > 0) {
@@ -379,7 +433,7 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
 
   const strokeRecord = {
     x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini,
-    skipPct, wobbleSeed
+    skipPct, wobbleSeed, taperFraction, tremorOffset
   };
 
   strokeRecord.timeoutId = setTimeout(() => {
@@ -432,12 +486,18 @@ function processScratchPoint(screenX, screenY) {
       const distance = Math.hypot(screenX - scratchLastScreenX, screenY - scratchLastScreenY);
       const dt = Math.max(inactivityGap || 1, 1); // ms, protege contre une division par ~0
       const speed = distance / dt; // px/ms
-      const skipPct = skipPctFromSpeed(speed);
+
+      const opacityMul = opacityMultiplierFromSpeed(speed);
+      const finalOpacity = Math.min(targetOpacity * opacityMul, SCRATCH_MAX_FINAL_OPACITY);
+
+      const skipPct = randomSkipPct();
+      const taperFraction = randomTaperFraction();
+      const tremorOffset = randomTremorOffset();
 
       spawnFadingStroke(
         scratchLastScreenX, scratchLastScreenY, screenX, screenY,
         scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-        targetOpacity, fadeMs, skipPct
+        finalOpacity, fadeMs, skipPct, taperFraction, tremorOffset
       );
     }
   }
