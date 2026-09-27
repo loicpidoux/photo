@@ -39,6 +39,7 @@ let scratchPendingNextPage = null;
 let scratchTransitionPromise = null;
 let scratchPageLoadedResolve = null;
 let scratchPageLoadedPromise = null;
+let scratchPageFullyLoaded = false; // true seulement une fois l'historique de la page CHARGE - protege contre une sauvegarde qui ecraserait tout avec un canvas encore vide
 
 function screenToFrameCoords(clientX, clientY) {
   const rect = scratchCanvas.getBoundingClientRect();
@@ -73,6 +74,7 @@ function fetchScratchImage(pageName, type) {
 }
 
 function loadScratchPage(pageName) {
+  scratchPageFullyLoaded = false;
   scratchCtx.clearRect(0, 0, REF_W, REF_H);
   deltaCtx.clearRect(0, 0, REF_W, REF_H);
 
@@ -95,8 +97,12 @@ function loadScratchPage(pageName) {
       hasUnsavedScratchChanges = true;
       hasUnsavedDelta = true;
     }
+    scratchPageFullyLoaded = true;
     if (scratchPageLoadedResolve) scratchPageLoadedResolve();
   }).catch(() => {
+    // Meme en cas d'echec reseau, on debloque les sauvegardes futures - sinon
+    // plus rien ne se sauvegarderait jamais pour le reste de la session.
+    scratchPageFullyLoaded = true;
     if (scratchPageLoadedResolve) scratchPageLoadedResolve();
   });
 }
@@ -155,7 +161,12 @@ function switchScratchPage(nextPage) {
   bakeAllPending();
   const pageToSave = currentScratchPage;
 
-  scratchTransitionPromise = saveScratchPageNow(pageToSave).then(() => {
+  // Si la page qu'on quitte n'a pas fini de charger son propre historique,
+  // on NE LA SAUVEGARDE PAS (elle pourrait ne contenir qu'un canvas vide ou
+  // incomplet) - on perd au pire les tout derniers traits, jamais l'historique.
+  const saveBeforeSwitch = scratchPageFullyLoaded ? saveScratchPageNow(pageToSave) : Promise.resolve();
+
+  scratchTransitionPromise = saveBeforeSwitch.then(() => {
     currentScratchPage = nextPage;
     loadScratchPage(nextPage);
     scratchTransitionInProgress = false;
@@ -447,6 +458,7 @@ if (!isMobileDeviceScratch()) {
 function saveMainState() {
   if (isMobileDeviceScratch()) return;
   if (scratchTransitionInProgress) return;
+  if (!scratchPageFullyLoaded) return;
   if (!hasUnsavedScratchChanges) return;
   saveScratchPageNow(currentScratchPage);
 }
@@ -457,11 +469,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     bakeAllPending();
     if (isMobileDeviceScratch()) return;
+    if (!scratchPageFullyLoaded) return;
     saveScratchPageNow(currentScratchPage);
   }
 });
 window.addEventListener('pagehide', () => {
   bakeAllPending();
   if (isMobileDeviceScratch()) return;
+  if (!scratchPageFullyLoaded) return;
   saveScratchPageNow(currentScratchPage);
 });
