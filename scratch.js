@@ -12,11 +12,19 @@ const scratchCtx = scratchCanvas.getContext('2d');
 
 const MOBILE_ZOOM_FACTOR = 1.3;
 
+// Facteur d'echelle actuel entre le canvas de reference (1920x1140) et l'ecran
+// reel - mis a jour a chaque calcul de transformation. Sert a ce que le
+// tremblement et le pointille (dessines a l'ecran pour l'apercu, puis a la
+// resolution de reference pour le resultat fige) paraissent de la meme taille
+// visuelle dans les deux cas.
+let scratchDisplayScale = 1;
+
 function updateScratchTransform() {
   let scale = Math.max(screen.width / REF_W, screen.height / REF_H);
   if (isMobileDeviceScratch()) {
     scale *= MOBILE_ZOOM_FACTOR;
   }
+  scratchDisplayScale = scale;
 
   let offsetY = 0;
   if (!document.fullscreenElement) {
@@ -227,21 +235,23 @@ let hasUnsavedDelta = false;
 
 const pendingStrokes = [];
 
-// --- Tramage organique : dessine un segment dans un canvas donné, en sautant
-// aléatoirement une partie des pixels (propre à CHAQUE trait) et en compensant
-// la luminosité des pixels survivants. Une légère ondulation fait varier ce
-// pourcentage tout au long du trait, pour éviter un rendu trop uniforme.
-const SCRATCH_WOBBLE_AMPLITUDE = 0.12;
-const SCRATCH_WOBBLE_FREQUENCY = 11;
-const SCRATCH_MAX_COMPENSATION = 4;
+// =====================================================================
+// --- Dessin organique, version "outils natifs" (rapide sur tout ordinateur)
+// =====================================================================
+// Avant, chaque trait etait lu et re-ecrit pixel par pixel (getImageData /
+// putImageData) pour creer les trous, l'estompage, etc. C'est fiable mais
+// couteux - d'autant plus couteux que le trait est long (donc precisement les
+// gestes rapides et amples, qui couvrent une grande zone). Cette version
+// utilise a la place des outils NATIFS du navigateur (pointilles, degrade),
+// qui donnent un effet proche sans jamais lire un seul pixel a la main.
+// Cout : on perd le grain fin pixel-par-pixel et le petit bruit de luminosite
+// individuel - le rendu est un peu plus "regulier" qu'avant, mais reste
+// nettement plus rapide, y compris sur un ordinateur peu puissant.
 
-// % de trous : tire au hasard entre 1% et 25% pour CHAQUE trait, independant de
-// la vitesse (decision explicite : la vitesse ne controle plus les trous, voir
-// plus bas). Moyenne de 3 tirages uniformes plutot qu'un seul : favorise les
-// valeurs autour du centre de la fourchette (~13%), les extremes (1% ou 25%)
-// restent possibles mais deviennent plus rares - evite l'effet "au hasard total".
-// Un petit +/-10% est ajoute par-dessus, puis le resultat est replafonne dans
-// la fourchette 1%-25% pour ne jamais la depasser.
+// % de trous : tire au hasard entre 1% et 25% pour CHAQUE trait, independant
+// de la vitesse. Moyenne de 3 tirages uniformes plutot qu'un seul : favorise
+// les valeurs autour du centre de la fourchette (~13%), les extremes (1% ou
+// 25%) restent possibles mais deviennent plus rares.
 const SCRATCH_SKIP_MIN = 0.01;
 const SCRATCH_SKIP_MAX = 0.25;
 const SCRATCH_SKIP_JITTER = 0.2; // +/- 10 points de pourcentage
@@ -253,36 +263,33 @@ function randomSkipPct() {
   return Math.min(Math.max(base + jitter, SCRATCH_SKIP_MIN), SCRATCH_SKIP_MAX);
 }
 
-// Vitesse -> OPACITE occasionnelle : un mouvement RAPIDE ET AMPLE a une chance
-// (pas systematique) de doubler l'opacite du trait - pas un effet continu et
-// discret, un vrai "coup d'accent" ponctuel. A ajuster apres test reel.
-const SCRATCH_FAST_MOVE_MIN_DISTANCE = 40; // px, ce qui compte comme un geste "assez grand"
-const SCRATCH_FAST_MOVE_MIN_SPEED = 1.0; // px/ms, ce qui compte comme "tres rapide"
-const SCRATCH_FAST_MOVE_BOOST_CHANCE = 0.35; // "occasionnellement"
-const SCRATCH_FAST_MOVE_OPACITY_MULT = 2.0; // "le double"
-const SCRATCH_MAX_FINAL_OPACITY = 0.5; // plafond de securite, evite un trait "brule"
+// Traduit ce % de trous en un motif de pointilles natif (setLineDash), calcule
+// UNE SEULE FOIS par trait (les longueurs sont exprimees en unites du canvas
+// de reference ; on les remet a l'echelle au moment de dessiner selon le
+// canvas cible - voir drawOrganicStroke).
+const SCRATCH_DASH_UNIT_MIN = 1.5;
+const SCRATCH_DASH_UNIT_MAX = 3.5;
 
-function maybeApplySpeedBoost(baseOpacity, distance, speed) {
-  const eligible = distance >= SCRATCH_FAST_MOVE_MIN_DISTANCE && speed >= SCRATCH_FAST_MOVE_MIN_SPEED;
-  if (eligible && Math.random() < SCRATCH_FAST_MOVE_BOOST_CHANCE) {
-    return Math.min(baseOpacity * SCRATCH_FAST_MOVE_OPACITY_MULT, SCRATCH_MAX_FINAL_OPACITY);
-  }
-  return baseOpacity;
+function buildDashPattern(skipPct) {
+  const filledFraction = 1 - skipPct;
+  const unit = SCRATCH_DASH_UNIT_MIN + Math.random() * (SCRATCH_DASH_UNIT_MAX - SCRATCH_DASH_UNIT_MIN);
+  const dashLen = Math.max(unit * filledFraction, 0.3);
+  const gapLen = Math.max(unit * skipPct, 0.3);
+  return [dashLen, gapLen];
 }
 
 // Estompage aux extremites (F) : chaque trait a sa propre proportion, tiree au
-// hasard entre 0% (pas d'estompage) et 20% (estompage marque) de sa longueur,
-// a chaque bout.
+// hasard entre 0% et 20% de sa longueur, a chaque bout - fait via un degrade
+// natif (createLinearGradient), pas de lecture de pixel.
 const SCRATCH_TAPER_MAX_FRACTION = 0.20;
 
 function randomTaperFraction() {
   return Math.random() * SCRATCH_TAPER_MAX_FRACTION;
 }
 
-// Tremblement de la ligne elle-meme (G) : DEUX points de controle (pas un seul),
-// chacun decale perpendiculairement de +/- SCRATCH_TREMOR_MAX_PX pixels - donne
-// une petite double-courbure (plus proche d'un vrai tremblement de main qu'une
-// simple bosse unique).
+// Tremblement de la ligne elle-meme (G) : DEUX points de controle, chacun
+// decale perpendiculairement de +/- SCRATCH_TREMOR_MAX_PX pixels (unites de
+// reference) - une petite double-courbure plutot qu'une ligne droite.
 const SCRATCH_TREMOR_MAX_PX = 4;
 
 function randomTremorOffsets() {
@@ -292,135 +299,83 @@ function randomTremorOffsets() {
   ];
 }
 
-// Grain moins "bruit blanc" : au lieu de decider chaque pixel independamment,
-// on decide par petits GROUPES le long du trait (plus proche d'une vraie
-// texture de mine de crayon que d'un bruit numerique uniforme). CRUCIAL : ce
-// "programme" de groupes est calcule en coordonnees RELATIVES (0 a 1 le long du
-// trait), donc independant de la resolution - il peut etre calcule UNE SEULE
-// FOIS par trait et reutilise a l'identique pour l'apercu ET le resultat fige,
-// ce qui elimine le glitch (aucun re-tirage au hasard entre les deux).
-const SCRATCH_CLUSTER_MIN_T = 0.04; // fraction de la longueur du trait
-const SCRATCH_CLUSTER_MAX_T = 0.18;
-const SCRATCH_BRIGHTNESS_NOISE = 0.3; // +/- 15%, tire une fois par groupe
+// Accents occasionnels : un trait tres court a une petite chance d'etre
+// nettement plus lumineux ; un trait long a une chance beaucoup plus rare
+// d'avoir le meme traitement - pour ne jamais saturer le site de blanc.
+// A ajuster apres test reel.
+const SCRATCH_SHORT_ACCENT_MAX_DISTANCE = 12; // px ecran, ce qu'on considere "tres court"
+const SCRATCH_SHORT_ACCENT_CHANCE = 0.04;
+const SCRATCH_LONG_ACCENT_MIN_DISTANCE = 80; // px ecran, ce qu'on considere "long"
+const SCRATCH_LONG_ACCENT_CHANCE = 0.004; // tres tres rare
+const SCRATCH_ACCENT_OPACITY_MIN = 0.25;
+const SCRATCH_ACCENT_OPACITY_MAX = 0.35;
+const SCRATCH_MAX_FINAL_OPACITY = 0.5; // garde-fou general
 
-function buildDitherSchedule(skipPct, wobbleSeed) {
-  const schedule = [];
-  let t = 0;
-  while (t < 1) {
-    const runLenT = SCRATCH_CLUSTER_MIN_T + Math.random() * (SCRATCH_CLUSTER_MAX_T - SCRATCH_CLUSTER_MIN_T);
-    const tEnd = Math.min(t + runLenT, 1);
-    const wobble = Math.sin(t * SCRATCH_WOBBLE_FREQUENCY + wobbleSeed) * SCRATCH_WOBBLE_AMPLITUDE;
-    const localSkip = Math.min(Math.max(skipPct + wobble, 0), 0.97);
-    const skip = Math.random() < localSkip;
-    const compensation = Math.min(1 / (1 - localSkip), SCRATCH_MAX_COMPENSATION);
-    const brightnessNoise = 1 + (Math.random() - 0.5) * SCRATCH_BRIGHTNESS_NOISE;
-    schedule.push({ tStart: t, tEnd, skip, compensation, brightnessNoise });
-    t = tEnd;
+function maybeApplyAccent(baseOpacity, distance) {
+  const accentOpacity = () => Math.min(
+    SCRATCH_ACCENT_OPACITY_MIN + Math.random() * (SCRATCH_ACCENT_OPACITY_MAX - SCRATCH_ACCENT_OPACITY_MIN),
+    SCRATCH_MAX_FINAL_OPACITY
+  );
+  if (distance <= SCRATCH_SHORT_ACCENT_MAX_DISTANCE && Math.random() < SCRATCH_SHORT_ACCENT_CHANCE) {
+    return accentOpacity();
   }
-  return schedule;
+  if (distance >= SCRATCH_LONG_ACCENT_MIN_DISTANCE && Math.random() < SCRATCH_LONG_ACCENT_CHANCE) {
+    return accentOpacity();
+  }
+  return baseOpacity;
 }
 
-function findScheduleEntry(schedule, t) {
-  for (let s = 0; s < schedule.length; s++) {
-    if (t >= schedule[s].tStart && t <= schedule[s].tEnd) return schedule[s];
-  }
-  return schedule[schedule.length - 1]; // secours pour un t legerement hors [0,1] (bord de la courbe)
-}
-
-function drawDitheredLine(ctx, x1, y1, x2, y2, opacity, schedule, taperFraction, tremorOffsets) {
-  const canvasW = ctx.canvas.width;
-  const canvasH = ctx.canvas.height;
-  if (canvasW <= 0 || canvasH <= 0) return;
-
+// Dessine directement le trait sur le contexte donne (aucune lecture de pixel,
+// aucun canvas intermediaire) - une seule ligne stroke() suffit.
+// scaleFactor : 1 pour le canvas de reference (resultat fige), ou
+// scratchDisplayScale pour le canvas ecran (apercu), afin que le pointille et
+// le tremblement paraissent de la meme taille visuelle dans les deux cas.
+function drawOrganicStroke(ctx, x1, y1, x2, y2, opacity, dashPattern, taperFraction, tremorOffsets, scaleFactor) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const len = Math.hypot(dx, dy) || 1;
   const perpX = -dy / len;
   const perpY = dx / len;
-  const [tremor1, tremor2] = tremorOffsets;
-  const cp1x = x1 + dx * (1 / 3) + perpX * tremor1;
-  const cp1y = y1 + dy * (1 / 3) + perpY * tremor1;
-  const cp2x = x1 + dx * (2 / 3) + perpX * tremor2;
-  const cp2y = y1 + dy * (2 / 3) + perpY * tremor2;
+  const [t1, t2] = tremorOffsets;
+  const scaledT1 = t1 * scaleFactor;
+  const scaledT2 = t2 * scaleFactor;
+  const cp1x = x1 + dx * (1 / 3) + perpX * scaledT1;
+  const cp1y = y1 + dy * (1 / 3) + perpY * scaledT1;
+  const cp2x = x1 + dx * (2 / 3) + perpX * scaledT2;
+  const cp2y = y1 + dy * (2 / 3) + perpY * scaledT2;
 
-  const tmp = document.createElement('canvas');
-  tmp.width = canvasW;
-  tmp.height = canvasH;
-  const tctx = tmp.getContext('2d');
-  tctx.strokeStyle = `rgba(255,255,255,${opacity})`;
-  tctx.lineWidth = SCRATCH_LINE_WIDTH;
-  tctx.lineCap = 'round';
-  tctx.beginPath();
-  tctx.moveTo(x1, y1);
-  // Deux points de controle (double courbure) plutot qu'une ligne droite ou
-  // une simple bosse unique - c'est le tremblement (G).
-  tctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, y2);
-  tctx.stroke();
-
-  const imgData = tctx.getImageData(0, 0, canvasW, canvasH);
-  const data = imgData.data;
-  const lenSq = (dx * dx + dy * dy) || 1;
-
-  // Le "programme" de trous (schedule) a ete calcule UNE SEULE FOIS par trait,
-  // avant meme cet appel - on ne fait ici QUE le lire et l'appliquer, jamais de
-  // nouveau tirage au hasard. C'est ce qui garantit que l'apercu et le resultat
-  // fige se ressemblent exactement (plus de glitch au moment de figer le trait).
-  for (let py = 0; py < canvasH; py++) {
-    for (let px = 0; px < canvasW; px++) {
-      const idx = (py * canvasW + px) * 4 + 3;
-      if (data[idx] === 0) continue;
-
-      const relX = px - x1;
-      const relY = py - y1;
-      // Approximation : reste basee sur la ligne droite d'origine, meme avec
-      // la courbe - l'ecart reel est de quelques pixels au maximum, negligeable.
-      const t = (relX * dx + relY * dy) / lenSq;
-
-      let taperMul = 1;
-      if (taperFraction > 0) {
-        if (t < taperFraction) {
-          taperMul = Math.max(t, 0) / taperFraction;
-        } else if (t > 1 - taperFraction) {
-          taperMul = Math.max(1 - t, 0) / taperFraction;
-        }
-      }
-      if (taperMul <= 0) { data[idx] = 0; continue; }
-
-      const entry = findScheduleEntry(schedule, Math.min(Math.max(t, 0), 1));
-      if (entry.skip) {
-        data[idx] = 0;
-      } else {
-        data[idx] = Math.min(255, data[idx] * taperMul * entry.compensation * entry.brightnessNoise);
-      }
-    }
+  if (taperFraction > 0) {
+    const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+    const stopIn = Math.min(taperFraction, 0.49);
+    const stopOut = Math.max(1 - taperFraction, 0.51);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(stopIn, `rgba(255,255,255,${opacity})`);
+    grad.addColorStop(stopOut, `rgba(255,255,255,${opacity})`);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.strokeStyle = grad;
+  } else {
+    ctx.strokeStyle = `rgba(255,255,255,${opacity})`;
   }
 
-  tctx.putImageData(imgData, 0, 0);
-  ctx.drawImage(tmp, 0, 0);
+  ctx.lineWidth = SCRATCH_LINE_WIDTH;
+  ctx.lineCap = 'round';
+  ctx.setLineDash(dashPattern.map(v => v * scaleFactor));
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, y2);
+  ctx.stroke();
 }
 
 function bakeStroke(stroke) {
-  const pad = SCRATCH_LINE_WIDTH / 2 + 1;
-  const minX = Math.floor(Math.min(stroke.x1, stroke.x2) - pad);
-  const minY = Math.floor(Math.min(stroke.y1, stroke.y2) - pad);
-  const maxX = Math.ceil(Math.max(stroke.x1, stroke.x2) + pad);
-  const maxY = Math.ceil(Math.max(stroke.y1, stroke.y2) + pad);
-  const bw = Math.max(maxX - minX, 1);
-  const bh = Math.max(maxY - minY, 1);
-
-  const tmp = document.createElement('canvas');
-  tmp.width = bw;
-  tmp.height = bh;
-  const tctx = tmp.getContext('2d');
-  drawDitheredLine(
-    tctx,
-    stroke.x1 - minX, stroke.y1 - minY, stroke.x2 - minX, stroke.y2 - minY,
-    stroke.targetOpacity, stroke.schedule, stroke.taperFraction, stroke.tremorOffsets
-  );
-
   [scratchCtx, deltaCtx].forEach(ctx => {
+    ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(tmp, minX, minY);
+    drawOrganicStroke(
+      ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2,
+      stroke.targetOpacity, stroke.dashPattern, stroke.taperFraction, stroke.tremorOffsets,
+      1 // le canvas de reference EST l'unite de reference - pas de mise a l'echelle
+    );
+    ctx.restore();
   });
 
   hasUnsavedScratchChanges = true;
@@ -438,18 +393,14 @@ function bakeAllPending() {
   }
 }
 
-function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, schedule, taperFraction, tremorOffsets) {
-  // schedule, taperFraction et tremorOffsets sont calcules par l'appelant (voir
-  // processScratchPoint) - une seule fois, des la naissance du trait : les
-  // memes valeurs serviront a la fois pour l'apercu (ci-dessous) et pour le
-  // resultat fige (bakeStroke) - le style ne change donc pas quand le trait se
-  // fige, et le "programme" de trous (schedule) etant deja entierement decide
-  // a l'avance, il n'y a plus de nouveau tirage au hasard entre les deux (donc
-  // plus de glitch). Note : le tremblement (tremorOffsets) est exprime en
-  // pixels et reutilise tel quel sur les deux canvas, meme si leurs echelles
-  // (ecran vs reference) different legerement - limite residuelle mineure.
-
-  const pad = SCRATCH_LINE_WIDTH / 2 + 2;
+function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, frameY1, frameX2, frameY2, targetOpacity, fadeMs, dashPattern, taperFraction, tremorOffsets) {
+  // dashPattern, taperFraction et tremorOffsets sont calcules par l'appelant
+  // (voir processScratchPoint) - une seule fois, des la naissance du trait :
+  // les memes valeurs serviront a la fois pour l'apercu (ci-dessous) et pour
+  // le resultat fige (bakeStroke), avec juste une mise a l'echelle adaptee a
+  // chaque canvas (voir scratchDisplayScale) - le style ne change donc pas
+  // quand le trait se fige.
+  const pad = SCRATCH_LINE_WIDTH / 2 + 6;
   const minX = Math.min(screenX1, screenX2) - pad;
   const minY = Math.min(screenY1, screenY2) - pad;
   const w = Math.abs(screenX2 - screenX1) + pad * 2;
@@ -470,10 +421,11 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
   document.body.appendChild(mini);
 
   const mctx = mini.getContext('2d');
-  drawDitheredLine(
+  drawOrganicStroke(
     mctx,
     screenX1 - minX, screenY1 - minY, screenX2 - minX, screenY2 - minY,
-    targetOpacity, schedule, taperFraction, tremorOffsets
+    targetOpacity, dashPattern, taperFraction, tremorOffsets,
+    scratchDisplayScale
   );
 
   if (fadeMs > 0) {
@@ -484,7 +436,7 @@ function spawnFadingStroke(screenX1, screenY1, screenX2, screenY2, frameX1, fram
 
   const strokeRecord = {
     x1: frameX1, y1: frameY1, x2: frameX2, y2: frameY2, targetOpacity, baked: false, miniEl: mini,
-    schedule, taperFraction, tremorOffsets
+    dashPattern, taperFraction, tremorOffsets
   };
 
   strokeRecord.timeoutId = setTimeout(() => {
@@ -535,21 +487,18 @@ function processScratchPoint(screenX, screenY) {
 
     if (shouldDraw && targetOpacity !== null) {
       const distance = Math.hypot(screenX - scratchLastScreenX, screenY - scratchLastScreenY);
-      const dt = Math.max(inactivityGap || 1, 1); // ms, protege contre une division par ~0
-      const speed = distance / dt; // px/ms
 
-      const finalOpacity = maybeApplySpeedBoost(targetOpacity, distance, speed);
+      const finalOpacity = maybeApplyAccent(targetOpacity, distance);
 
       const skipPct = randomSkipPct();
-      const wobbleSeed = Math.random() * Math.PI * 2;
-      const schedule = buildDitherSchedule(skipPct, wobbleSeed);
+      const dashPattern = buildDashPattern(skipPct);
       const taperFraction = randomTaperFraction();
       const tremorOffsets = randomTremorOffsets();
 
       spawnFadingStroke(
         scratchLastScreenX, scratchLastScreenY, screenX, screenY,
         scratchLastFrameX, scratchLastFrameY, frame.x, frame.y,
-        finalOpacity, fadeMs, schedule, taperFraction, tremorOffsets
+        finalOpacity, fadeMs, dashPattern, taperFraction, tremorOffsets
       );
     }
   }
