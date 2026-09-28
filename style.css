@@ -295,8 +295,8 @@ body.viewing-serie .footer-links-desktop {
   font-size: 18px;
 }
 .apropos-text {
-  max-width: 500px;
-  padding: 0 24px;
+  max-width: 680px;
+  padding: 64px 24px;
   font-size: 16px;
   line-height: 1.6;
 }
