@@ -294,11 +294,26 @@ body.viewing-serie .footer-links-desktop {
 .merci-text {
   font-size: 18px;
 }
+html.scrollable,
+html.scrollable body {
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .apropos-text {
   max-width: 680px;
   padding: 64px 24px;
   font-size: 16px;
   line-height: 1.6;
+}
+.apropos-text p,
+.apropos-text blockquote {
+  margin-bottom: 1.2em;
+}
+.apropos-text blockquote {
+  border-left: 5px solid #1a1a1a;
+  padding-left: 20px;
 }
 .image-track {
   position: relative;
