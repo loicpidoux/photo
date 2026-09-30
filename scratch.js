@@ -190,6 +190,24 @@ function postScratchBlob(pageName, type, canvasEl, keepalive, useFastEncoding) {
   });
 }
 
+// Sauvegarde de secours pour pagehide/visibilitychange UNIQUEMENT : le
+// navigateur refuse purement et simplement tout envoi de plus de 64 Ko
+// pendant qu'une page se ferme (regle de securite du navigateur, pas un
+// reglage qu'on controle) - notre image complete ("main") pese presque
+// toujours largement plus que ça, donc on NE LA TENTE JAMAIS ici. Seul le
+// delta (les tout derniers traits, quelques Ko en pratique) est envoye.
+// L'image complete sera sauvegardee normalement a la prochaine occasion sure.
+function saveDeltaEmergency(pageName) {
+  if (!hasUnsavedDelta) return;
+
+  postScratchBlob(pageName, 'delta', deltaCanvas, true, true); // keepalive=true, encodage rapide
+
+  hasUnsavedDelta = false;
+  deltaCtx.clearRect(0, 0, deltaCanvas.width, deltaCanvas.height);
+  // hasUnsavedScratchChanges reste TEL QUEL (pas remis a false) : le "main"
+  // complet reste marque "a sauvegarder" pour la prochaine sauvegarde normale.
+}
+
 function saveScratchPageNow(pageName, useFastEncoding) {
   const savedMain = hasUnsavedScratchChanges;
   const savedDelta = hasUnsavedDelta;
@@ -559,12 +577,12 @@ document.addEventListener('visibilitychange', () => {
     bakeAllPending();
     if (isMobileDeviceScratch()) return;
     if (!scratchPageFullyLoaded) return;
-    saveScratchPageNow(currentScratchPage, true); // true = encodage rapide/fiable, la page pourrait se fermer
+    saveDeltaEmergency(currentScratchPage); // jamais le "main" ici - voir commentaire ci-dessus
   }
 });
 window.addEventListener('pagehide', () => {
   bakeAllPending();
   if (isMobileDeviceScratch()) return;
   if (!scratchPageFullyLoaded) return;
-  saveScratchPageNow(currentScratchPage, true); // true = encodage rapide/fiable, la page pourrait se fermer
+  saveDeltaEmergency(currentScratchPage); // jamais le "main" ici - voir commentaire ci-dessus
 });
