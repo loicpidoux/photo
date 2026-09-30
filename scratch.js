@@ -62,6 +62,59 @@ deltaCanvas.width = REF_W;
 deltaCanvas.height = REF_H;
 const deltaCtx = deltaCanvas.getContext('2d');
 
+// --- Encodage PNG "niveaux de gris + transparence" (gain de poids ~50%), dans
+// un Worker separe pour ne jamais ralentir le dessin ou l'affichage, meme sur
+// un ordinateur peu puissant. Si le navigateur est trop ancien pour le
+// supporter (rare), on retombe automatiquement sur la methode d'avant.
+const supportsGrayscalePngEncoder = typeof CompressionStream !== 'undefined' && typeof Worker !== 'undefined';
+const pngEncoderWorker = supportsGrayscalePngEncoder ? new Worker('png-encoder-worker.js') : null;
+let pngEncoderNextId = 1;
+const pngEncoderPending = new Map();
+
+if (pngEncoderWorker) {
+  pngEncoderWorker.onmessage = (e) => {
+    const { id, ok, buffer, error } = e.data;
+    const pending = pngEncoderPending.get(id);
+    if (!pending) return;
+    pngEncoderPending.delete(id);
+    if (ok) {
+      pending.resolve(new Blob([buffer], { type: 'image/png' }));
+    } else {
+      console.error('Erreur encodeur PNG :', error);
+      pending.resolve(null);
+    }
+  };
+  pngEncoderWorker.onerror = () => {
+    // Le Worker lui-meme a plante (rare) - on ne bloque jamais une sauvegarde
+    // pour ca, on la laisse simplement echouer proprement cette fois-ci.
+  };
+}
+
+function encodeCanvasToPngBlob(canvasEl) {
+  if (!pngEncoderWorker) {
+    // Repli : methode native du navigateur (PNG couleur, plus lourd mais
+    // toujours fiable).
+    return new Promise((resolve) => {
+      canvasEl.toBlob((blob) => resolve(blob), 'image/png');
+    });
+  }
+
+  const ctx = canvasEl.getContext('2d');
+  const { width, height } = canvasEl;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const id = pngEncoderNextId++;
+
+  return new Promise((resolve) => {
+    pngEncoderPending.set(id, { resolve });
+    // Le buffer est "transfere" (pas copie) au Worker pour eviter de dupliquer
+    // ~8 Mo de pixels a chaque sauvegarde.
+    pngEncoderWorker.postMessage(
+      { id, width, height, buffer: imageData.data.buffer },
+      [imageData.data.buffer]
+    );
+  });
+}
+
 function fetchScratchImage(pageName, type) {
   return fetch('/scratch?page=' + encodeURIComponent(pageName) + '&type=' + type)
     .then(res => {
@@ -116,19 +169,15 @@ function loadScratchPage(pageName) {
 }
 
 function postScratchBlob(pageName, type, canvasEl, keepalive) {
-  return new Promise((resolve) => {
-    canvasEl.toBlob((blob) => {
-      if (!blob) { resolve(); return; }
-      const opts = {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/png' },
-        body: blob
-      };
-      if (keepalive) opts.keepalive = true;
-      fetch('/scratch?page=' + encodeURIComponent(pageName) + '&type=' + type, opts)
-        .catch(() => {})
-        .finally(resolve);
-    }, 'image/png');
+  return encodeCanvasToPngBlob(canvasEl).then((blob) => {
+    if (!blob) return;
+    const opts = {
+      method: 'POST',
+      headers: { 'Content-Type': 'image/png' },
+      body: blob
+    };
+    if (keepalive) opts.keepalive = true;
+    return fetch('/scratch?page=' + encodeURIComponent(pageName) + '&type=' + type, opts).catch(() => {});
   });
 }
 
