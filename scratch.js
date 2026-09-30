@@ -294,6 +294,16 @@ const SCRATCH_BOOST_OPACITY_MAX = 0.14;
 const SCRATCH_RANDOM_BOOST_CHANCE = 0.8;
 const SCRATCH_BOOST_FADE_MS = 0;
 
+// Plus un segment est long, moins il a de chances de declencher le boost
+// (opacite plus marquee) - jamais a zero, juste de plus en plus rare. Sans
+// ca, un grand geste rapide apres une pause (souvent long ET boost en meme
+// temps par coincidence) peut saturer une zone precise du canvas.
+const SCRATCH_LENGTH_PENALTY_HALF_DISTANCE = 120; // px ecran : distance a laquelle la chance de boost est deja divisee par 2
+
+function lengthAdjustedBoostChance(baseChance, distance) {
+  return baseChance / (1 + distance / SCRATCH_LENGTH_PENALTY_HALF_DISTANCE);
+}
+
 const SCRATCH_STROKE_GROUP_SIZE_MIN = 1;
 const SCRATCH_STROKE_GROUP_SIZE_MAX = 5;
 let scratchGroupRemaining = 0;
@@ -506,6 +516,8 @@ function processScratchPoint(screenX, screenY) {
   const inactivityGap = scratchLastMoveTime !== null ? now - scratchLastMoveTime : null;
 
   if (scratchLastScreenX !== null) {
+    const distance = Math.hypot(screenX - scratchLastScreenX, screenY - scratchLastScreenY);
+
     let shouldDraw = Math.random() >= SCRATCH_SKIP_CHANCE;
     let targetOpacity = null;
     let fadeMs = SCRATCH_FADE_MS;
@@ -513,12 +525,12 @@ function processScratchPoint(screenX, screenY) {
     const eligibleForIntro = inactivityGap !== null && inactivityGap >= SCRATCH_INTRO_INACTIVITY_MS && !scratchIntroBoostDone;
     const eligibleForRandomBoost = inactivityGap !== null && inactivityGap >= SCRATCH_RANDOM_BOOST_INACTIVITY_MS;
 
-    if (eligibleForIntro) {
+    if (eligibleForIntro && Math.random() < lengthAdjustedBoostChance(1, distance)) {
       targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
       fadeMs = SCRATCH_BOOST_FADE_MS;
       scratchIntroBoostDone = true;
       shouldDraw = true;
-    } else if (eligibleForRandomBoost && Math.random() < SCRATCH_RANDOM_BOOST_CHANCE) {
+    } else if (eligibleForRandomBoost && Math.random() < lengthAdjustedBoostChance(SCRATCH_RANDOM_BOOST_CHANCE, distance)) {
       targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
       fadeMs = SCRATCH_BOOST_FADE_MS;
       shouldDraw = true;
