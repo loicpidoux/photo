@@ -168,8 +168,17 @@ function loadScratchPage(pageName) {
   });
 }
 
-function postScratchBlob(pageName, type, canvasEl, keepalive) {
-  return encodeCanvasToPngBlob(canvasEl).then((blob) => {
+function postScratchBlob(pageName, type, canvasEl, keepalive, useFastEncoding) {
+  // useFastEncoding=true : on saute le Worker et on utilise la methode
+  // NATIVE du navigateur (canvas.toBlob), plus lourde en poids mais eprouvee
+  // et fiable meme quand la page est en train de se fermer - contrairement au
+  // Worker, qui peut se faire couper avant d'avoir fini de repondre dans ce
+  // cas precis (confirme par test reel).
+  const encodePromise = useFastEncoding
+    ? new Promise((resolve) => canvasEl.toBlob((blob) => resolve(blob), 'image/png'))
+    : encodeCanvasToPngBlob(canvasEl);
+
+  return encodePromise.then((blob) => {
     if (!blob) return;
     const opts = {
       method: 'POST',
@@ -181,16 +190,16 @@ function postScratchBlob(pageName, type, canvasEl, keepalive) {
   });
 }
 
-function saveScratchPageNow(pageName) {
+function saveScratchPageNow(pageName, useFastEncoding) {
   const savedMain = hasUnsavedScratchChanges;
   const savedDelta = hasUnsavedDelta;
   const promises = [];
 
   if (savedMain) {
-    promises.push(postScratchBlob(pageName, 'main', scratchCanvas, false));
+    promises.push(postScratchBlob(pageName, 'main', scratchCanvas, false, useFastEncoding));
   }
   if (savedDelta) {
-    promises.push(postScratchBlob(pageName, 'delta', deltaCanvas, true));
+    promises.push(postScratchBlob(pageName, 'delta', deltaCanvas, true, useFastEncoding));
   }
 
   hasUnsavedScratchChanges = false;
@@ -550,12 +559,12 @@ document.addEventListener('visibilitychange', () => {
     bakeAllPending();
     if (isMobileDeviceScratch()) return;
     if (!scratchPageFullyLoaded) return;
-    saveScratchPageNow(currentScratchPage);
+    saveScratchPageNow(currentScratchPage, true); // true = encodage rapide/fiable, la page pourrait se fermer
   }
 });
 window.addEventListener('pagehide', () => {
   bakeAllPending();
   if (isMobileDeviceScratch()) return;
   if (!scratchPageFullyLoaded) return;
-  saveScratchPageNow(currentScratchPage);
+  saveScratchPageNow(currentScratchPage, true); // true = encodage rapide/fiable, la page pourrait se fermer
 });
