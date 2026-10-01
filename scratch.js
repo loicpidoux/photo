@@ -311,6 +311,16 @@ let scratchGroupOpacity = 0;
 
 let scratchIntroBoostDone = false;
 
+// Le boost ne doit pas toujours apparaitre exactement au premier point apres
+// une pause - sinon, comme on revient souvent du meme endroit (pres des
+// boutons du navigateur, etc.), ca cree une convergence de traits lumineux
+// toujours au meme endroit. On attend quelques points de mouvement avant
+// d'ouvrir la possibilite, ce qui disperse naturellement l'endroit.
+const SCRATCH_BOOST_WINDOW_START = 2; // ignore les 2 premiers points apres la reprise
+const SCRATCH_BOOST_WINDOW_END = 6;   // la fenetre se referme ensuite
+let scratchResumeCounter = 0;
+let scratchBoostUsedThisResume = false;
+
 let scratchLastScreenX = null;
 let scratchLastScreenY = null;
 let scratchLastFrameX = null;
@@ -523,7 +533,20 @@ function processScratchPoint(screenX, screenY) {
     let fadeMs = SCRATCH_FADE_MS;
 
     const eligibleForIntro = inactivityGap !== null && inactivityGap >= SCRATCH_INTRO_INACTIVITY_MS && !scratchIntroBoostDone;
-    const eligibleForRandomBoost = inactivityGap !== null && inactivityGap >= SCRATCH_RANDOM_BOOST_INACTIVITY_MS;
+
+    // Reinitialise le compteur a chaque vraie pause (reprise du mouvement) ;
+    // sinon, avance d'un point. La fenetre de boost ne s'ouvre qu'un peu APRES
+    // le point de reprise exact, pour ne pas toujours cibler le meme endroit.
+    const justResumed = inactivityGap !== null && inactivityGap >= SCRATCH_RANDOM_BOOST_INACTIVITY_MS;
+    if (justResumed) {
+      scratchResumeCounter = 0;
+      scratchBoostUsedThisResume = false;
+    } else {
+      scratchResumeCounter++;
+    }
+    const eligibleForRandomBoost = !scratchBoostUsedThisResume &&
+      scratchResumeCounter >= SCRATCH_BOOST_WINDOW_START &&
+      scratchResumeCounter <= SCRATCH_BOOST_WINDOW_END;
 
     if (eligibleForIntro && Math.random() < lengthAdjustedBoostChance(1, distance)) {
       targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
@@ -531,6 +554,7 @@ function processScratchPoint(screenX, screenY) {
       scratchIntroBoostDone = true;
       shouldDraw = true;
     } else if (eligibleForRandomBoost && Math.random() < lengthAdjustedBoostChance(SCRATCH_RANDOM_BOOST_CHANCE, distance)) {
+      scratchBoostUsedThisResume = true;
       targetOpacity = SCRATCH_BOOST_OPACITY_MIN + Math.random() * (SCRATCH_BOOST_OPACITY_MAX - SCRATCH_BOOST_OPACITY_MIN);
       fadeMs = SCRATCH_BOOST_FADE_MS;
       shouldDraw = true;
