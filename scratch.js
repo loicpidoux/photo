@@ -291,7 +291,7 @@ const SCRATCH_INTRO_INACTIVITY_MS = 10;
 const SCRATCH_RANDOM_BOOST_INACTIVITY_MS = 1000;
 const SCRATCH_BOOST_OPACITY_MIN = 0.005;
 const SCRATCH_BOOST_OPACITY_MAX = 0.12;
-const SCRATCH_RANDOM_BOOST_CHANCE = 0.2;
+const SCRATCH_RANDOM_BOOST_CHANCE = 0.6;
 const SCRATCH_BOOST_FADE_MS = 0;
 
 // Plus un segment est long, moins il a de chances de declencher le boost
