@@ -40,6 +40,9 @@ function updateScratchTransform() {
 window.addEventListener('resize', updateScratchTransform);
 updateScratchTransform();
 
+window.addEventListener('load', updateScratchTransform);
+requestAnimationFrame(() => requestAnimationFrame(updateScratchTransform));
+
 // --- Système multi-pages ---
 let currentScratchPage = 'home';
 let scratchTransitionInProgress = false;
