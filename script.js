@@ -28,6 +28,9 @@ function updateFrameTransform() {
 window.addEventListener('resize', updateFrameTransform);
 updateFrameTransform();
 
+window.addEventListener('load', updateFrameTransform);
+requestAnimationFrame(() => requestAnimationFrame(updateFrameTransform));
+
 window.addEventListener('popstate', (e) => {
   if (isMobileDevice() && e.state && e.state.view) {
     if (e.state.view === 'grid') {
