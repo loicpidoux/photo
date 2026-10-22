@@ -39,7 +39,12 @@ function updateScratchTransform() {
 }
 window.addEventListener('resize', updateScratchTransform);
 updateScratchTransform();
-
+// Filet de securite : juste apres le chargement, window.outerHeight (utilise
+// dans offsetY ci-dessus) peut encore renvoyer une valeur provisoire sur
+// certains navigateurs/configurations - ce qui place tout le canvas hors de
+// l'ecran (fond gris, rien de visible) jusqu'a un redimensionnement (ex:
+// ouverture des outils de developpement, qui "corrige" le probleme par
+// hasard). On relance donc le calcul une fois la fenetre vraiment stabilisee.
 window.addEventListener('load', updateScratchTransform);
 requestAnimationFrame(() => requestAnimationFrame(updateScratchTransform));
 
@@ -135,6 +140,38 @@ function fetchScratchImage(pageName, type) {
       });
     })
     .catch(() => null);
+}
+
+// Rattrape l'affichage local avec le serveur des que l'onglet redevient
+// visible (voir le listener 'visibilitychange' plus bas) - utile pour un
+// onglet reste ouvert longtemps pendant que d'autres visiteurs dessinaient
+// ailleurs. Ne touche jamais au "main" du serveur, juste a ce qu'on affiche
+// localement ; la vraie garantie contre la perte de donnees reste la fusion
+// faite dans saveScratchPageNow au moment de sauvegarder.
+async function resyncScratchFromServer() {
+  if (isMobileDeviceScratch()) return;
+  if (!scratchPageFullyLoaded || scratchTransitionInProgress) return;
+
+  // On garde une copie de nos traits pas encore sauvegardes, pour ne pas
+  // les perdre pendant qu'on rafraichit depuis le serveur.
+  const pendingSnapshot = document.createElement('canvas');
+  pendingSnapshot.width = REF_W;
+  pendingSnapshot.height = REF_H;
+  pendingSnapshot.getContext('2d').drawImage(deltaCanvas, 0, 0);
+
+  const [serverMainImg, serverDeltaImg] = await Promise.all([
+    fetchScratchImage(currentScratchPage, 'main'),
+    fetchScratchImage(currentScratchPage, 'delta')
+  ]);
+
+  scratchCtx.clearRect(0, 0, REF_W, REF_H);
+  if (serverMainImg) {
+    scratchCtx.globalCompositeOperation = 'source-over';
+    scratchCtx.drawImage(serverMainImg, 0, 0);
+  }
+  scratchCtx.globalCompositeOperation = 'lighter';
+  if (serverDeltaImg) scratchCtx.drawImage(serverDeltaImg, 0, 0);
+  scratchCtx.drawImage(pendingSnapshot, 0, 0); // nos traits pas encore sauvegardes
 }
 
 function loadScratchPage(pageName) {
@@ -651,6 +688,8 @@ document.addEventListener('visibilitychange', () => {
     if (isMobileDeviceScratch()) return;
     if (!scratchPageFullyLoaded) return;
     saveDeltaEmergency(currentScratchPage); // jamais le "main" ici - voir commentaire ci-dessus
+  } else if (document.visibilityState === 'visible') {
+    resyncScratchFromServer();
   }
 });
 window.addEventListener('pagehide', () => {
