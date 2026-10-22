@@ -216,8 +216,42 @@ function saveScratchPageNow(pageName, useFastEncoding) {
   const savedDelta = hasUnsavedDelta;
   const promises = [];
 
+  // Instantane de nos traits en attente, pris AVANT de vider deltaCanvas
+  // plus bas - sert a les fusionner proprement avec la version du serveur
+  // la plus recente (voir ci-dessous), sans etre affecte par les traits
+  // qui arriveraient APRES ce point (geres a la prochaine sauvegarde).
+  const pendingDeltaSnapshot = document.createElement('canvas');
+  pendingDeltaSnapshot.width = REF_W;
+  pendingDeltaSnapshot.height = REF_H;
+  pendingDeltaSnapshot.getContext('2d').drawImage(deltaCanvas, 0, 0);
+
   if (savedMain) {
-    promises.push(postScratchBlob(pageName, 'main', scratchCanvas, false, useFastEncoding));
+    // On va chercher la version "main" ACTUELLE du serveur avant d'ecraser -
+    // elle peut contenir des traits ajoutes par un autre visiteur pendant
+    // qu'on etait inactif. On ne pose par-dessus que NOS traits en attente,
+    // jamais toute notre copie locale, qui peut etre perimee.
+    promises.push(
+      fetchScratchImage(pageName, 'main').then(serverMainImg => {
+        const mergedMain = document.createElement('canvas');
+        mergedMain.width = REF_W;
+        mergedMain.height = REF_H;
+        const mergedCtx = mergedMain.getContext('2d');
+        if (serverMainImg) {
+          mergedCtx.globalCompositeOperation = 'source-over';
+          mergedCtx.drawImage(serverMainImg, 0, 0);
+        }
+        mergedCtx.globalCompositeOperation = 'lighter';
+        mergedCtx.drawImage(pendingDeltaSnapshot, 0, 0);
+
+        // Garde notre copie locale coherente avec ce qu'on vient d'envoyer,
+        // pour que les PROCHAINS traits dessines localement partent bien de
+        // cette base a jour.
+        scratchCtx.clearRect(0, 0, REF_W, REF_H);
+        scratchCtx.drawImage(mergedMain, 0, 0);
+
+        return postScratchBlob(pageName, 'main', mergedMain, false, useFastEncoding);
+      })
+    );
   }
   if (savedDelta) {
     promises.push(postScratchBlob(pageName, 'delta', deltaCanvas, true, useFastEncoding));
