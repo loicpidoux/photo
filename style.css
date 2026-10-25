@@ -364,6 +364,6 @@ html.scrollable body {
   text-shadow:
     0 0 1px rgba(30, 30, 30, 0.5),
     0 0 3px rgba(30, 30, 30, 0.3),
-    0 0 7px rgba(30, 30, 30, 0.15),
-    0 0 13px rgba(30, 30, 30, 0.08);
+    0 0 6px rgba(30, 30, 30, 0.15),
+    0 0 10px rgba(30, 30, 30, 0.08);
 }
