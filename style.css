@@ -443,3 +443,13 @@ html.scrollable body {
     0 0 4px rgba(30, 30, 30, 0.04),
     0 0 5px rgba(30, 30, 30, 0.011);
 }
+
+.contact-form input,
+.contact-form textarea,
+.contact-form button {
+  box-shadow:
+    0 0 1px rgba(30, 30, 30, 0.3),
+    0 0 3px rgba(30, 30, 30, 0.12),
+    0 0 4px rgba(30, 30, 30, 0.04),
+    0 0 5px rgba(30, 30, 30, 0.011);
+}
