@@ -383,7 +383,7 @@ html.scrollable body {
   position: absolute;
   inset: 0;
   background-color: #000000;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.6 0 0 0 0  0 0.6 0 0 0  0 0 0.6 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.6 0 0 0 0  0 0.6 0 0 0  0 0 0.6 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   background-size: 200px 200px;
   background-repeat: repeat;
   mask-repeat: no-repeat;
@@ -393,11 +393,11 @@ html.scrollable body {
   mask-size: contain;
   -webkit-mask-size: contain;
   mask-mode: alpha;
-  filter:
-    drop-shadow(0 0 1px rgba(30, 30, 30, 0.3))
-    drop-shadow(0 0 3px rgba(30, 30, 30, 0.12))
-    drop-shadow(0 0 4px rgba(30, 30, 30, 0.04))
-    drop-shadow(0 0 5px rgba(30, 30, 30, 0.011));
+ filter:
+  drop-shadow(0 0 1px rgba(30, 30, 30, 0.2))
+  drop-shadow(0 0 3px rgba(30, 30, 30, 0.079))
+  drop-shadow(0 0 4px rgba(30, 30, 30, 0.026))
+  drop-shadow(0 0 5px rgba(30, 30, 30, 0.007));
 }
 
 .close-btn::after {
@@ -434,12 +434,12 @@ html.scrollable body {
   bottom: 0;
   width: 5px;
   background-color: #000000;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.6 0 0 0 0  0 0.6 0 0 0  0 0 0.6 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.6 0 0 0 0  0 0.6 0 0 0  0 0 0.6 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   background-size: 200px 200px;
   background-repeat: repeat;
   box-shadow:
-    0 0 1px rgba(30, 30, 30, 0.3),
-    0 0 3px rgba(30, 30, 30, 0.12),
-    0 0 4px rgba(30, 30, 30, 0.04),
-    0 0 5px rgba(30, 30, 30, 0.011);
+  0 0 1px rgba(30, 30, 30, 0.2),
+  0 0 3px rgba(30, 30, 30, 0.079),
+  0 0 4px rgba(30, 30, 30, 0.026),
+  0 0 5px rgba(30, 30, 30, 0.007);
 }
