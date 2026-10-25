@@ -394,10 +394,10 @@ html.scrollable body {
   -webkit-mask-size: contain;
   mask-mode: alpha;
  filter:
-  drop-shadow(0 0 1px rgba(30, 30, 30, 0.2))
-  drop-shadow(0 0 3px rgba(30, 30, 30, 0.079))
-  drop-shadow(0 0 4px rgba(30, 30, 30, 0.026))
-  drop-shadow(0 0 5px rgba(30, 30, 30, 0.007));
+    drop-shadow(0 0 1px rgba(30, 30, 30, 0.3))
+    drop-shadow(0 0 3px rgba(30, 30, 30, 0.12))
+    drop-shadow(0 0 4px rgba(30, 30, 30, 0.04))
+    drop-shadow(0 0 5px rgba(30, 30, 30, 0.011));
 }
 
 .close-btn::after {
@@ -438,8 +438,8 @@ html.scrollable body {
   background-size: 200px 200px;
   background-repeat: repeat;
   box-shadow:
-  0 0 1px rgba(30, 30, 30, 0.2),
-  0 0 3px rgba(30, 30, 30, 0.079),
-  0 0 4px rgba(30, 30, 30, 0.026),
-  0 0 5px rgba(30, 30, 30, 0.007);
+    0 0 1px rgba(30, 30, 30, 0.3),
+    0 0 3px rgba(30, 30, 30, 0.12),
+    0 0 4px rgba(30, 30, 30, 0.04),
+    0 0 5px rgba(30, 30, 30, 0.011);
 }
