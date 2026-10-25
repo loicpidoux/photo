@@ -361,5 +361,4 @@ html.scrollable body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: #000000;
-  filter: url(#textBleed) blur(0.4px);
 }
