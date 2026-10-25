@@ -362,10 +362,10 @@ html.scrollable body {
   color: #000000;
   filter: blur(0px);
   text-shadow:
-    0 0 1px rgba(0, 0, 0, 0.3),
-    0 0 3px rgba(0, 0, 0, 0.12),
-    0 0 4px rgba(0, 0, 0, 0.04),
-    0 0 5px rgba(0, 0, 0, 0.011);
+    0 0 1px rgba(30, 30, 30, 0.3),
+    0 0 3px rgba(30, 30, 30, 0.12),
+    0 0 4px rgba(30, 30, 30, 0.04),
+    0 0 5px rgba(30, 30, 30, 0.011);
 }
 
 /* --- Grain sur les boutons icones --- */
