@@ -362,8 +362,8 @@ html.scrollable body {
   color: #000000;
   filter: blur(0.3px);
   text-shadow:
-    0 0 1px rgba(30, 30, 30, 0.33),
+    0 0 1px rgba(30, 30, 30, 0.3),
     0 0 3px rgba(30, 30, 30, 0.2),
     0 0 4px rgba(30, 30, 30, 0.1),
-    0 0 6px rgba(30, 30, 30, 0.05);
+    0 0 5px rgba(30, 30, 30, 0.05);
 }
