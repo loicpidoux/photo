@@ -343,3 +343,22 @@ html.scrollable body {
     display: none;
   }
 }
+
+/* --- Texte affecte par le grain --- */
+.serie-link,
+.footer-links-desktop a,
+.apropos-text,
+.apropos-text p,
+.apropos-text blockquote,
+.merci-text,
+.contact-form label,
+.contact-form button {
+  color: transparent;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"),
+    linear-gradient(#171717, #171717);
+  background-size: 200px 200px, auto;
+  background-repeat: repeat, no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
