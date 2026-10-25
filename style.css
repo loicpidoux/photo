@@ -360,7 +360,7 @@ html.scrollable body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: #000000;
-  filter: blur(0.2px);
+  filter: blur(0px);
   text-shadow:
     0 0 1px rgba(30, 30, 30, 0.3),
     0 0 3px rgba(30, 30, 30, 0.15),
