@@ -409,8 +409,11 @@ html.scrollable body {
   height: 100%;
 }
 
-/* Halo, sur les conteneurs (il suit tout ce qu'ils contiennent) */
-.reference-frame,
+/* Halo, sur les conteneurs (il suit tout ce qu'ils contiennent).
+   Accueil : le halo est sur chaque lien et non sur le grand cadre, sinon
+   chaque survol (changement d'opacite) refaisait l'ombre de tout le cadre. */
+.serie-link,
+.footer-links-desktop a,
 .contact-form,
 .apropos-text,
 .halo,
