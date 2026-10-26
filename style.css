@@ -227,6 +227,11 @@ body.viewing-serie .footer-links-desktop {
 .viewer.controls-hidden {
   cursor: none;
 }
+/* Pendant une serie, le cadre de l'accueil (invisible) ne doit pas capter la souris :
+   sinon il impose son curseur et le curseur ne disparait plus avec la croix. */
+body.viewing-serie .reference-frame {
+  pointer-events: none;
+}
 @media (max-width: 600px) {
   .nav-arrow {
     display: none;
