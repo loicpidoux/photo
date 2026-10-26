@@ -103,6 +103,10 @@ body::after {
      (.image-container, 10) et la grille (.grid-view, 5, placee apres dans la page). */
   z-index: 5;
 }
+/* TEST option B (a retirer apres decision) : avec ?b=1, le canvas passe sous le grain */
+html.scratch-test-b #scratchCanvas {
+  z-index: 2;
+}
 
 .series-list {
   position: absolute;
