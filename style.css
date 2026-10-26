@@ -36,8 +36,8 @@
      (opacite) et etalement (px). Le texte/les bordures (--glow) et les icones
      (--grain-halo) sont construits a partir de ces memes valeurs. */
   --halo-color: 0, 0, 0;
-  --halo-a1: 0.8;  --halo-r1: 1px;
-  --halo-a2: 0.2;  --halo-r2: 2px;
+  --halo-a1: 1;  --halo-r1: 1px;
+  --halo-a2: 0.4;  --halo-r2: 2px;
   --halo-a3: 0.1;  --halo-r3: 3px;
   --glow:
     0 0 var(--halo-r1) rgba(var(--halo-color), var(--halo-a1)),
