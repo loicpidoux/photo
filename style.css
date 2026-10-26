@@ -15,6 +15,12 @@
      l'effet de lueur avec le halo. Plus c'est clair, plus c'est doux. */
   --ink: #262626;
   --grain-size: 200px;
+  /* Taille des icones (croix, fleches, retour galerie) : s'adapte a l'ecran.
+     44px = taille d'origine sur un portable 15 pouces, et aussi la taille minimale
+     standard d'une cible tactile. Au-dela, elle grandit avec la fenetre (3% de la
+     largeur ou 4.8% de la hauteur, le plus petit des deux) jusqu'a 96px.
+     Les marges autour des icones suivent la meme proportion. */
+  --icon-size: clamp(44px, min(3vw, 4.8vh), 96px);
   /* Masque de grain : opaque presque partout, troue par des points de bruit.
      Reglage : le "-3" et le "2.2" de la derniere ligne de la matrice
      (alpha = -3*bruit + 2.2). Plus le 2.2 baisse, plus il y a de trous. */
@@ -158,10 +164,10 @@ body.viewing-serie .footer-links-desktop {
 }
 .close-btn {
   position: fixed;
-  top: 32px;
-  right: 48px;
-  width: 44px;
-  height: 44px;
+  top: calc(var(--icon-size) * 0.73);
+  right: calc(var(--icon-size) * 1.09);
+  width: var(--icon-size);
+  height: var(--icon-size);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -175,8 +181,8 @@ body.viewing-serie .footer-links-desktop {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
+  width: var(--icon-size);
+  height: var(--icon-size);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -189,8 +195,8 @@ body.viewing-serie .footer-links-desktop {
   padding: 0;
   transition: opacity 0.3s ease;
 }
-.nav-prev { left: 24px; }
-.nav-next { right: 24px; }
+.nav-prev { left: calc(var(--icon-size) * 0.55); }
+.nav-next { right: calc(var(--icon-size) * 0.55); }
 .controls-hidden .close-btn,
 .controls-hidden .nav-arrow,
 .controls-hidden .gallery-btn {
@@ -207,10 +213,10 @@ body.viewing-serie .footer-links-desktop {
 }
 .gallery-btn {
   position: fixed;
-  bottom: 32px;
-  right: 48px;
-  width: 44px;
-  height: 44px;
+  bottom: calc(var(--icon-size) * 0.73);
+  right: calc(var(--icon-size) * 1.09);
+  width: var(--icon-size);
+  height: var(--icon-size);
   background: none;
   border: none;
   font-size: 22px;
@@ -368,6 +374,14 @@ html.scrollable body {
      les parties deja trouees) ;
    - le GRAIN (masque) est sur les enfants directs.
    Les trous laissent voir le fond, qui reste intact. */
+
+/* Le dessin des icones remplit leur boite (qui suit --icon-size) */
+.close-btn svg,
+.nav-arrow svg,
+.gallery-btn svg {
+  width: 100%;
+  height: 100%;
+}
 
 /* 1. Halo, sur les conteneurs */
 .reference-frame,
