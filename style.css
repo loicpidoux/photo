@@ -98,7 +98,10 @@ body::after {
   height: 1140px;
   transform-origin: center center;
   pointer-events: none;
-  z-index: 2;
+  /* 5 : au-dessus de la couche de grain (body::after, z-index 4), sinon le grain
+     noie les rayures (tres discretes : opacite max 0.04). Reste sous les photos
+     (.image-container, 10) et la grille (.grid-view, 5, placee apres dans la page). */
+  z-index: 5;
 }
 
 .series-list {
