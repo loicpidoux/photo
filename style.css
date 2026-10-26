@@ -32,21 +32,20 @@
      ou 2.037% de la hauteur, le plus petit des deux), jusqu'a 96px.
      Les marges autour des icones suivent la meme proportion. */
   --icon-size: clamp(44px, min(1.146vw, 2.037vh), 96px);
-  /* HALO : un seul endroit a regler. 3 ombres noires (couche 1, 2, 3) : force
-     (opacite) et etalement (px). Le texte/les bordures (--glow) et les icones
-     (--grain-halo) sont construits a partir de ces memes valeurs. */
-  --halo-color: 0, 0, 0;
-  --halo-a1: 0.9;  --halo-r1: 1px;
-  --halo-a2: 0.4;  --halo-r2: 2px;
-  --halo-a3: 0.1;  --halo-r3: 3px;
+  /* HALO : un seul endroit a regler. 3 ombres de la couleur du texte (--ink), couches
+     1, 2, 3 : force (100% = pleine couleur de --ink, 0% = rien) et etalement (px).
+     Le texte/les bordures (--glow) et les icones (--grain-halo) en sont derives. */
+  --halo-a1: 90%;  --halo-r1: 1px;
+  --halo-a2: 40%;  --halo-r2: 2px;
+  --halo-a3: 10%;  --halo-r3: 3px;
   --glow:
-    0 0 var(--halo-r1) rgba(var(--halo-color), var(--halo-a1)),
-    0 0 var(--halo-r2) rgba(var(--halo-color), var(--halo-a2)),
-    0 0 var(--halo-r3) rgba(var(--halo-color), var(--halo-a3));
+    0 0 var(--halo-r1) color-mix(in srgb, var(--ink) var(--halo-a1), transparent),
+    0 0 var(--halo-r2) color-mix(in srgb, var(--ink) var(--halo-a2), transparent),
+    0 0 var(--halo-r3) color-mix(in srgb, var(--ink) var(--halo-a3), transparent);
   --grain-halo:
-    drop-shadow(0 0 var(--halo-r1) rgba(var(--halo-color), var(--halo-a1)))
-    drop-shadow(0 0 var(--halo-r2) rgba(var(--halo-color), var(--halo-a2)))
-    drop-shadow(0 0 var(--halo-r3) rgba(var(--halo-color), var(--halo-a3)));
+    drop-shadow(0 0 var(--halo-r1) color-mix(in srgb, var(--ink) var(--halo-a1), transparent))
+    drop-shadow(0 0 var(--halo-r2) color-mix(in srgb, var(--ink) var(--halo-a2), transparent))
+    drop-shadow(0 0 var(--halo-r3) color-mix(in srgb, var(--ink) var(--halo-a3), transparent));
 }
 
 html, body {
