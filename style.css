@@ -394,8 +394,8 @@ html.scrollable body {
   -webkit-mask-size: contain;
   mask-mode: alpha;
  filter:
-    drop-shadow(0 0 1px rgba(30, 30, 30, 0.3))
-    drop-shadow(0 0 3px rgba(30, 30, 30, 0.12))
+    drop-shadow(0 0 1px rgba(30, 30, 30, 1))
+    drop-shadow(0 0 2px rgba(30, 30, 30, 0.6))
     drop-shadow(0 0 4px rgba(30, 30, 30, 0.04))
     drop-shadow(0 0 5px rgba(30, 30, 30, 0.011));
 }
@@ -438,8 +438,8 @@ html.scrollable body {
   background-size: 200px 200px;
   background-repeat: repeat;
   box-shadow:
-    0 0 1px rgba(30, 30, 30, 0.3),
-    0 0 3px rgba(30, 30, 30, 0.12),
+    0 0 1px rgba(30, 30, 30, 1),
+    0 0 2px rgba(30, 30, 30, 0.6),
     0 0 4px rgba(30, 30, 30, 0.04),
     0 0 5px rgba(30, 30, 30, 0.011);
 }
