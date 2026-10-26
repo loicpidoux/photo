@@ -442,9 +442,6 @@ html.scrollable body {
 .contact-form input,
 .contact-form textarea,
 .contact-form button {
-  border: 1px solid transparent;
-  border-image-source: var(--grain-bg);
-  border-image-slice: 100 fill;
-  border-image-repeat: round;
+  border: 1px solid #000000;
   filter: var(--grain-halo);
 }
