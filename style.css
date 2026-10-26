@@ -22,7 +22,7 @@
   /* Couleur de l'encre (texte, bordures, icones). Pas du noir pur : le gris fonce
      garde le meme faible contraste avec le fond que l'ancien rendu, ce qui donne
      l'effet de lueur avec le halo. Plus c'est clair, plus c'est doux. */
-  --ink: #171717;
+  --ink: #080808;
   --grain-size: 200px;
   /* Taille des icones (croix, fleches, retour galerie) : s'adapte a l'ecran.
      Calee sur le portable 15 pouces Ultra HD (fenetre de 3840 x 2160) : 44px.
