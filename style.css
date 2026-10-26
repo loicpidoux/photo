@@ -35,9 +35,9 @@
   /* HALO : un seul endroit a regler. 3 ombres de la couleur du texte (--ink), couches
      1, 2, 3 : force (100% = pleine couleur de --ink, 0% = rien) et etalement (px).
      Le texte/les bordures (--glow) et les icones (--grain-halo) en sont derives. */
-  --halo-a1: 90%;  --halo-r1: 1px;
-  --halo-a2: 40%;  --halo-r2: 2px;
-  --halo-a3: 10%;  --halo-r3: 3px;
+  --halo-a1: 80%;  --halo-r1: 1px;
+  --halo-a2: 30%;  --halo-r2: 2px;
+  --halo-a3: 5%;  --halo-r3: 3px;
   --glow:
     0 0 var(--halo-r1) color-mix(in srgb, var(--ink) var(--halo-a1), transparent),
     0 0 var(--halo-r2) color-mix(in srgb, var(--ink) var(--halo-a2), transparent),
