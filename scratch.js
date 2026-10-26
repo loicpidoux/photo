@@ -209,7 +209,6 @@ function loadScratchPage(pageName) {
 }
 
 function postScratchBlob(pageName, type, canvasEl, keepalive, useFastEncoding) {
-  if (SCRATCH_TEST_B) return Promise.resolve(); // mode test : aucune sauvegarde
   // useFastEncoding=true : on saute le Worker et on utilise la methode
   // NATIVE du navigateur (canvas.toBlob), plus lourde en poids mais eprouvee
   // et fiable meme quand la page est en train de se fermer - contrairement au
@@ -359,17 +358,6 @@ function fadeOutScratch(callback) {
 
 const SCRATCH_SKIP_CHANCE = 0.4;
 const SCRATCH_MAX_OPACITY = 0.04;
-
-// --- TEST de l'option B (a retirer apres decision) ---------------------------
-// Ouvrir la page avec ?b=1 (ex. apropos.html?b=1) : le canvas des rayures passe
-// SOUS la couche de grain (regle `html.scratch-test-b` dans style.css) et tous
-// les traits sont renforces de SCRATCH_TEST_B_FACTOR (normaux ET "boost") pour
-// compenser le voile (opacite 35 % -> contraste x0.65, donc 1/0.65 = 1.54).
-// En mode test, RIEN n'est envoye au serveur : les rayures du test ne sont pas
-// sauvegardees et ne touchent pas aux donnees du site.
-const SCRATCH_TEST_B = new URLSearchParams(location.search).has('b');
-const SCRATCH_TEST_B_FACTOR = 1.54;
-if (SCRATCH_TEST_B) document.documentElement.classList.add('scratch-test-b');
 const SCRATCH_LINE_WIDTH = 1;
 const SCRATCH_FADE_MS = 60;
 
@@ -655,10 +643,6 @@ function processScratchPoint(screenX, screenY) {
           SCRATCH_STROKE_GROUP_SIZE_MIN + Math.random() * (SCRATCH_STROKE_GROUP_SIZE_MAX - SCRATCH_STROKE_GROUP_SIZE_MIN)
         );
       }
-    }
-
-    if (SCRATCH_TEST_B && targetOpacity !== null) {
-      targetOpacity = Math.min(1, targetOpacity * SCRATCH_TEST_B_FACTOR);
     }
 
     if (shouldDraw && targetOpacity !== null) {
