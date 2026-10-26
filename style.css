@@ -11,11 +11,14 @@
 :root {
   --grain-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.2 0.2 0.2 0 0  0.2 0.2 0.2 0 0  0.2 0.2 0.2 0 0  0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E");
   --grain-size: 200px;
+  /* Masque de grain : opaque presque partout, troue par des points de bruit.
+     Reglage : le "-3" et le "2.2" de la derniere ligne de la matrice
+     (alpha = -3*bruit + 2.2). Plus le 2.2 baisse, plus il y a de trous. */
+  --grain-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3 0 0 0 2.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Halo : deux ombres suffisent (les deux suivantes etaient invisibles) */
   --grain-halo:
     drop-shadow(0 0 1px rgba(30, 30, 30, 0.6))
-    drop-shadow(0 0 2px rgba(30, 30, 30, 0.2))
-    drop-shadow(0 0 4px rgba(30, 30, 30, 0.04))
-    drop-shadow(0 0 5px rgba(30, 30, 30, 0.011));
+    drop-shadow(0 0 3px rgba(30, 30, 30, 0.15));
 }
 
 html, body {
@@ -352,23 +355,22 @@ html.scrollable body {
   }
 }
 
-/* --- Texte affecte par le grain --- */
-.serie-link,
-.footer-links-desktop a,
-.apropos-text p,
-.apropos-text blockquote,
-.merci-text,
-.contact-form label,
-.contact-form button {
-  background-color: #000000;
-  background-image: var(--grain-bg);
-  background-size: var(--grain-size) var(--grain-size);
-  background-repeat: repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: #000000;
+/* --- Grain + halo sur le contenu : une seule regle pour tous les conteneurs ---
+   Le masque troue le contenu avec le grain (texte, labels, champs, texte saisi,
+   bordures, boutons) : les trous laissent voir le fond, qui reste donc intact.
+   Le filtre ajoute le halo une seule fois autour de tout ce que le conteneur
+   contient. */
+.reference-frame,
+.contact-form,
+.apropos-text,
+.merci-text {
   filter: var(--grain-halo);
+  -webkit-mask-image: var(--grain-mask);
+  mask-image: var(--grain-mask);
+  -webkit-mask-size: var(--grain-size) var(--grain-size);
+  mask-size: var(--grain-size) var(--grain-size);
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
 }
 
 /* --- Grain sur les boutons icones --- */
@@ -433,15 +435,4 @@ html.scrollable body {
   bottom: 0;
   width: 5px;
   background-color: #000000;
-  background-image: var(--grain-bg);
-  background-size: var(--grain-size) var(--grain-size);
-  background-repeat: repeat;
-  /* filter retiré : le parent (.apropos-text blockquote) applique déjà le halo à tout le bloc, barre comprise */
-}
-
-.contact-form input,
-.contact-form textarea,
-.contact-form button {
-  border: 1px solid #000000;
-  filter: var(--grain-halo);
 }
