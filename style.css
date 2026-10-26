@@ -436,12 +436,16 @@ html.scrollable body {
   background-image: var(--grain-bg);
   background-size: var(--grain-size) var(--grain-size);
   background-repeat: repeat;
-  filter: var(--grain-halo);
+  /* filter retiré : le parent (.apropos-text blockquote) applique déjà le halo à tout le bloc, barre comprise */
 }
 
 .contact-form input,
 .contact-form textarea,
 .contact-form button {
+  border: 1px solid transparent;
+  border-image-source: var(--grain-bg);
+  border-image-slice: 100 fill;
+  border-image-repeat: round;
   box-shadow:
     0 0 1px rgba(30, 30, 30, 1),
     0 0 2px rgba(30, 30, 30, 0.6),
