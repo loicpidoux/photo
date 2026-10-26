@@ -35,7 +35,7 @@
   /* HALO : un seul endroit a regler. 3 ombres de la couleur du texte (--ink), couches
      1, 2, 3 : force (100% = pleine couleur de --ink, 0% = rien) et etalement (px).
      Le texte/les bordures (--glow) et les icones (--grain-halo) en sont derives. */
-  --halo-a1: 66%;  --halo-r1: 1px;
+  --halo-a1: 90%;  --halo-r1: 1px;
   --halo-a2: 35%;  --halo-r2: 2px;
   --halo-a3: 12%;  --halo-r3: 3px;
   --glow:
