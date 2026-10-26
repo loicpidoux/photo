@@ -16,11 +16,13 @@
   --ink: #262626;
   --grain-size: 200px;
   /* Taille des icones (croix, fleches, retour galerie) : s'adapte a l'ecran.
-     44px = taille d'origine sur un portable 15 pouces, et aussi la taille minimale
-     standard d'une cible tactile. Au-dela, elle grandit avec la fenetre (3% de la
-     largeur ou 4.8% de la hauteur, le plus petit des deux) jusqu'a 96px.
+     Calee sur le portable 15 pouces Ultra HD (fenetre de 3840 x 2160) : 44px.
+     44px est aussi la taille minimale standard d'une cible tactile, donc elle ne
+     descend jamais en dessous (fenetres plus petites = 44px, comme avant).
+     Au-dela de 3840 x 2160 elle grandit proportionnellement (1.146% de la largeur
+     ou 2.037% de la hauteur, le plus petit des deux), jusqu'a 96px.
      Les marges autour des icones suivent la meme proportion. */
-  --icon-size: clamp(44px, min(3vw, 4.8vh), 96px);
+  --icon-size: clamp(44px, min(1.146vw, 2.037vh), 96px);
   /* Masque de grain : opaque presque partout, troue par des points de bruit.
      Reglage : le "-3" et le "2.2" de la derniere ligne de la matrice
      (alpha = -3*bruit + 2.2). Plus le 2.2 baisse, plus il y a de trous. */
